@@ -1,30 +1,10 @@
 
-Respo workflow in Calcit-js
+Mudder
 ----
 
-> Respo web page based on [calcit-js](https://github.com/calcit-lang/calcit).
+> what if we can edit JSON from Swagger API in a more visual way?
 
-Demo http://repo.calcit-lang.org/respo-calcit-workflow/ .
-
-### Usages
-
-To develop:
-
-```bash
-cr --emit-js # watching
-
-yarn # to install vite
-yarn vite # watching and running on localhost:3000
-```
-
-calcit-js is using [Calcit Editor](https://github.com/calcit-lang/editor).
-
-To build:
-
-```bash
-yarn vite build
-http-server dist/
-```
+Demo https://r.tiye.me/worktools/mudder/ .
 
 ### Workflow
 
