@@ -22,6 +22,8 @@
                   {} (:text "|Add Swagger JSON here") (:multiline? true)
                     :input-style $ {} (:height "\"50vh") (:font-family ui/font-code)
                     :card-style $ {} (:max-width "\"60vw")
+                focus $ :focus store
+              ; js/console.log focus
               div
                 {} $ :style (merge ui/global ui/column)
                 div
@@ -29,48 +31,81 @@
                     merge ui/expand $ {} (:padding "\"4px 8px")
                   button $ {} (:style ui/button) (:inner-text "\"Run")
                     :on-click $ fn (e d!)
-                      println $ :content state
+                      ; println $ :content state
                       .show prompt-plugin d! $ fn (text)
                         d! :api-data $ to-calcit-data (js/JSON.parse text)
-                div ({})
-                  comp-json-block $ :api-data store
+                  =< 8 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Array")
+                    :on-click $ fn (e d!) (d! :wrap-array nil)
+                  =< 8 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Object")
+                    :on-click $ fn (e d!) (d! :wrap-object nil)
+                  =< 8 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Text")
+                    :on-click $ fn (e d!)
+                      let
+                          data $ to-js-data (:api-data store)
+                        copy! $ js/JSON.stringify data nil 2
+                        js/console.log "\"Copied" data
+                div
+                  {} $ :style
+                    {} $ :padding "\"4px 8px"
+                  comp-json-block (:api-data store) ([]) focus
                 .render prompt-plugin
                 when dev? $ comp-reel (>> states :reel) reel ({})
         |comp-json-block $ quote
-          defn comp-json-block (data) (; js/console.log data)
-            case-default (get data "\"type")
-              div ({})
-                do (js/console.warn "\"Unkown data" data) (<> "\"Unknown data")
-              "\"object" $ div
-                {} $ :style style-block
-                <> "\"object"
-                list->
-                  {} $ :style
-                    {} $ :margin-left 8
-                  -> data (get "\"properties")
-                    .map-list $ fn (pair )
-                      let[] (k v) pair $ [] k
-                        div
-                          {} $ :style ui/row
+          defn comp-json-block (data path focus)
+            div
+              {}
+                :on-click $ fn (e d!) (d! :focus path)
+                :style $ if (= path focus)
+                  {} (:border-radius "\"8px")
+                    :background-color $ hsl 0 0 97
+              case-default (get data "\"type")
+                div ({})
+                  do (js/console.warn "\"Unkown data" data) (<> "\"Unknown data")
+                "\"object" $ div
+                  {} $ :style style-block
+                  <> "\"object"
+                  list->
+                    {} $ :style
+                      {} $ :margin-left 8
+                    -> data (get "\"properties")
+                      .map-list $ fn (pair )
+                        let[] (k v) pair $ [] k
                           div
-                            {} $ :style
-                              {} (:font-family ui/font-code)
-                                :color $ hsl 200 90 60
-                            <> k
-                          =< 8 nil
-                          comp-json-block v
-              "\"string" $ div ({}) (<> "\"string")
-              "\"number" $ div ({}) (<> "\"number")
-              "\"boolean" $ div ({}) (<> "\"boolean")
-              "\"array" $ div
-                {} $ :style (merge ui/row style-block)
-                <> "\"array"
-                =< 8 nil
-                -> data (get "\"items") (comp-json-block)
+                            {} $ :style ui/row
+                            div
+                              {} $ :style
+                                {} (:font-family ui/font-code)
+                                  :color $ hsl 200 90 60
+                              <> k
+                            =< 8 nil
+                            comp-json-block v (conj path "\"properties" k) focus
+                "\"string" $ div
+                  {} $ :style style-literal
+                  <> "\"string"
+                "\"number" $ div
+                  {} $ :style style-literal
+                  <> "\"number"
+                "\"integer" $ div
+                  {} $ :style style-literal
+                  <> "\"integer"
+                "\"boolean" $ div
+                  {} $ :style style-literal
+                  <> "\"boolean"
+                "\"array" $ div
+                  {} $ :style (merge ui/row style-block)
+                  <> "\"array"
+                  =< 8 nil
+                  -> data (get "\"items")
+                    comp-json-block (conj path "\"items") focus
         |style-block $ quote
           def style-block $ {}
             :border-left $ str "\"1px solid " (hsl 0 0 90)
             :padding-left 8
+        |style-literal $ quote
+          def style-literal $ {} (:cursor :pointer) (:padding "\"2px 4px")
       :ns $ quote
         ns app.comp.container $ :require (respo-ui.core :as ui)
           respo-ui.core :refer $ hsl
@@ -80,6 +115,7 @@
           respo-md.comp.md :refer $ comp-md
           app.config :refer $ dev?
           respo-alerts.core :refer $ use-alert use-prompt use-confirm
+          "\"copy-text-to-clipboard" :default copy!
     |app.config $ {}
       :defs $ {}
         |dev? $ quote
@@ -145,6 +181,7 @@
             :states $ {}
               :cursor $ []
             :api-data nil
+            :focus $ []
       :ns $ quote (ns app.schema)
     |app.updater $ {}
       :defs $ {}
@@ -154,6 +191,16 @@
               do (println "\"unknown op:" op) store
               :states $ update-states store data
               :api-data $ assoc store :api-data data
+              :focus $ assoc store :focus data
+              :wrap-object $ update-in store
+                prepend (:focus store) :api-data
+                fn (x)
+                  {} ("\"type" "\"object")
+                    "\"properties" $ {} ("\"data" x)
+              :wrap-array $ update-in store
+                prepend (:focus store) :api-data
+                fn (x)
+                  {} ("\"type" "\"array") ("\"items" x)
               :hydrate-storage data
       :ns $ quote
         ns app.updater $ :require
