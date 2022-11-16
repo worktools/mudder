@@ -23,18 +23,23 @@
                     :input-style $ {} (:height "\"50vh") (:font-family ui/font-code)
                     :card-style $ {} (:max-width "\"60vw")
                 focus $ :focus store
+                api-data $ :api-data store
               ; js/console.log focus
+              js/console.log $ get-in api-data focus
               div
-                {} $ :style (merge ui/global ui/column)
+                {} $ :style (merge ui/global ui/fullscreen ui/column)
                 div
                   {} $ :style
-                    merge ui/expand $ {} (:padding "\"4px 8px")
-                  button $ {} (:style ui/button) (:inner-text "\"Run")
+                    {} $ :padding "\"4px 8px"
+                  button $ {} (:style ui/button) (:inner-text "\"Load")
                     :on-click $ fn (e d!)
                       ; println $ :content state
                       .show prompt-plugin d! $ fn (text)
                         d! :api-data $ to-calcit-data (js/JSON.parse text)
                   =< 8 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Reset")
+                    :on-click $ fn (e d!) (d! :reset nil)
+                  =< 24 nil
                   button $ {} (:style ui/button) (:inner-text "\"Array")
                     :on-click $ fn (e d!) (d! :wrap-array nil)
                   =< 8 nil
@@ -44,13 +49,26 @@
                   button $ {} (:style ui/button) (:inner-text "\"Text")
                     :on-click $ fn (e d!)
                       let
-                          data $ to-js-data (:api-data store)
+                          data $ to-js-data api-data
                         copy! $ js/JSON.stringify data nil 2
                         js/console.log "\"Copied" data
+                  =< 24 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Copy")
+                    :on-click $ fn (e d!) (d! :copy nil)
+                  =< 4 nil
+                  if-let
+                    clipboard $ :clipboard store
+                    <> (get clipboard "\"type")
+                      {} (:font-family ui/font-fancy)
+                        :color $ hsl 0 0 70
+                  =< 4 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Paste")
+                    :on-click $ fn (e d!) (d! :paste nil)
                 div
                   {} $ :style
-                    {} $ :padding "\"4px 8px"
-                  comp-json-block (:api-data store) ([]) focus
+                    merge ui/expand $ {} (:padding "\"4px 8px")
+                  comp-json-block api-data ([]) focus
+                  =< nil 200
                 .render prompt-plugin
                 when dev? $ comp-reel (>> states :reel) reel ({})
         |comp-json-block $ quote
@@ -63,43 +81,57 @@
                     :background-color $ hsl 0 0 97
               case-default (get data "\"type")
                 div ({})
-                  do (js/console.warn "\"Unkown data" data) (<> "\"Unknown data")
-                "\"object" $ div
-                  {} $ :style style-block
-                  <> "\"object"
-                  list->
-                    {} $ :style
-                      {} $ :margin-left 8
-                    -> data (get "\"properties")
-                      .map-list $ fn (pair )
-                        let[] (k v) pair $ [] k
-                          div
-                            {} $ :style ui/row
+                  do (js/console.warn "\"Unkown data" data)
+                    <> $ str "\"Unknown data: data"
+                "\"object" $ let
+                    required-fields $ get data "\"required"
+                  div
+                    {} $ :style style-block
+                    <> "\"Object" $ {} (:font-family ui/font-fancy)
+                    list->
+                      {} $ :style
+                        {} $ :margin-left 8
+                      -> data (get "\"properties")
+                        .map-list $ fn (pair )
+                          let[] (k v) pair $ [] k
                             div
-                              {} $ :style
-                                {} (:font-family ui/font-code)
-                                  :color $ hsl 200 90 60
-                              <> k
-                            =< 8 nil
-                            comp-json-block v (conj path "\"properties" k) focus
-                "\"string" $ div
-                  {} $ :style style-literal
-                  <> "\"string"
-                "\"number" $ div
-                  {} $ :style style-literal
-                  <> "\"number"
-                "\"integer" $ div
-                  {} $ :style style-literal
-                  <> "\"integer"
-                "\"boolean" $ div
-                  {} $ :style style-literal
-                  <> "\"boolean"
+                              {} $ :style ui/row
+                              div
+                                {} $ :style
+                                  {} (:font-family ui/font-code)
+                                    :color $ hsl 200 90 60
+                                if
+                                  -> required-fields .to-list $ .includes? k
+                                  <> "\"*" $ {} (:color :red)
+                                <> k
+                              =< 8 nil
+                              comp-json-block v (conj path "\"properties" k) focus
                 "\"array" $ div
                   {} $ :style (merge ui/row style-block)
-                  <> "\"array"
+                  <> "\"Array" $ {} (:font-family ui/font-fancy)
                   =< 8 nil
                   -> data (get "\"items")
                     comp-json-block (conj path "\"items") focus
+                "\"string" $ comp-literal data
+                "\"number" $ comp-literal data
+                "\"integer" $ comp-literal data
+                "\"boolean" $ comp-literal data
+        |comp-literal $ quote
+          defn comp-literal (rule)
+            div
+              {} $ :style style-literal
+              <> (get rule "\"type")
+                {} $ :font-family ui/font-fancy
+              if-let
+                mock $ get rule "\"mock"
+                span $ {}
+                  :style $ {} (:margin-left 8) (:font-size 10) (:font-family ui/font-code)
+                    :color $ hsl 200 40 70
+                  :inner-text $ get mock "\"mock"
+              if-let
+                desc $ get rule "\"description"
+                <> desc $ {} (:margin-left 8) (:font-size 12)
+                  :color $ hsl 0 0 80
         |style-block $ quote
           def style-block $ {}
             :border-left $ str "\"1px solid " (hsl 0 0 90)
@@ -181,7 +213,9 @@
             :states $ {}
               :cursor $ []
             :api-data nil
+            :version-0 nil
             :focus $ []
+            :clipboard nil
       :ns $ quote (ns app.schema)
     |app.updater $ {}
       :defs $ {}
@@ -190,7 +224,8 @@
             case-default op
               do (println "\"unknown op:" op) store
               :states $ update-states store data
-              :api-data $ assoc store :api-data data
+              :api-data $ -> store (assoc :api-data data) (assoc :version-0 data)
+              :reset $ assoc store :api-data (:version-0 store)
               :focus $ assoc store :focus data
               :wrap-object $ update-in store
                 prepend (:focus store) :api-data
@@ -201,6 +236,15 @@
                 prepend (:focus store) :api-data
                 fn (x)
                   {} ("\"type" "\"array") ("\"items" x)
+              :copy $ let
+                  data $ get-in (:api-data store) (:focus store)
+                assoc store :clipboard data
+              :paste $ let
+                  focus $ :focus store
+                  item $ :clipboard store
+                if (some? item)
+                  update store :api-data $ fn (api) (assoc-in api focus item)
+                  , store
               :hydrate-storage data
       :ns $ quote
         ns app.updater $ :require
