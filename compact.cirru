@@ -37,6 +37,9 @@
                       .show prompt-plugin d! $ fn (text)
                         d! :api-data $ to-calcit-data (js/JSON.parse text)
                   =< 8 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Reset")
+                    :on-click $ fn (e d!) (d! :reset nil)
+                  =< 24 nil
                   button $ {} (:style ui/button) (:inner-text "\"Array")
                     :on-click $ fn (e d!) (d! :wrap-array nil)
                   =< 8 nil
@@ -49,6 +52,18 @@
                           data $ to-js-data api-data
                         copy! $ js/JSON.stringify data nil 2
                         js/console.log "\"Copied" data
+                  =< 24 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Copy")
+                    :on-click $ fn (e d!) (d! :copy nil)
+                  =< 4 nil
+                  if-let
+                    clipboard $ :clipboard store
+                    <> (get clipboard "\"type")
+                      {} (:font-family ui/font-fancy)
+                        :color $ hsl 0 0 70
+                  =< 4 nil
+                  button $ {} (:style ui/button) (:inner-text "\"Paste")
+                    :on-click $ fn (e d!) (d! :paste nil)
                 div
                   {} $ :style
                     merge ui/expand $ {} (:padding "\"4px 8px")
@@ -198,7 +213,9 @@
             :states $ {}
               :cursor $ []
             :api-data nil
+            :version-0 nil
             :focus $ []
+            :clipboard nil
       :ns $ quote (ns app.schema)
     |app.updater $ {}
       :defs $ {}
@@ -207,7 +224,8 @@
             case-default op
               do (println "\"unknown op:" op) store
               :states $ update-states store data
-              :api-data $ assoc store :api-data data
+              :api-data $ -> store (assoc :api-data data) (assoc :version-0 data)
+              :reset $ assoc store :api-data (:version-0 store)
               :focus $ assoc store :focus data
               :wrap-object $ update-in store
                 prepend (:focus store) :api-data
@@ -218,6 +236,15 @@
                 prepend (:focus store) :api-data
                 fn (x)
                   {} ("\"type" "\"array") ("\"items" x)
+              :copy $ let
+                  data $ get-in (:api-data store) (:focus store)
+                assoc store :clipboard data
+              :paste $ let
+                  focus $ :focus store
+                  item $ :clipboard store
+                if (some? item)
+                  update store :api-data $ fn (api) (assoc-in api focus item)
+                  , store
               :hydrate-storage data
       :ns $ quote
         ns app.updater $ :require
