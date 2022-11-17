@@ -66,62 +66,76 @@
                     :on-click $ fn (e d!) (d! :paste nil)
                 div
                   {} $ :style
-                    merge ui/expand $ {} (:padding "\"4px 8px")
-                  comp-json-block api-data ([]) focus
+                    merge ui/expand ui/column $ {} (:padding "\"20px 20px")
+                  div ({})
+                    comp-json-block api-data ([]) focus
                   =< nil 200
                 .render prompt-plugin
                 when dev? $ comp-reel (>> states :reel) reel ({})
         |comp-json-block $ quote
           defn comp-json-block (data path focus)
+            case-default (get data "\"type")
+              div ({})
+                do (js/console.warn "\"Unkown data" data)
+                  <> $ str "\"Unknown data: data"
+              "\"object" $ let
+                  required-fields $ get data "\"required"
+                div
+                  {} $ :style
+                    merge style-block
+                      {} $ :flex-direction :column
+                      if (= path focus)
+                        {} (:border-radius "\"8px")
+                          :background-color $ hsl 0 0 97
+                  span $ {}
+                    :style $ {} (:cursor :pointer) (:font-family ui/font-fancy)
+                    :inner-text "\"Object"
+                    :on-click $ fn (e d!) (d! :focus path)
+                  list->
+                    {} $ :style
+                      {} $ :margin-left 8
+                    -> data (get "\"properties")
+                      .map-list $ fn (pair )
+                        let[] (k v) pair $ [] k
+                          div
+                            {} $ :style ui/row
+                            div
+                              {} $ :style
+                                {} (:font-family ui/font-code)
+                                  :color $ hsl 200 90 60
+                              if
+                                -> required-fields .to-list $ .includes? k
+                                <> "\"*" $ {} (:color :red)
+                              <> k
+                            =< 8 nil
+                            comp-json-block v (conj path "\"properties" k) focus
+              "\"array" $ div
+                {} $ :style
+                  merge ui/row style-block $ if (= path focus)
+                    {} (:border-radius "\"8px")
+                      :background-color $ hsl 0 0 97
+                span $ {}
+                  :style $ {} (:cursor :pointer) (:font-family ui/font-fancy)
+                  :on-click $ fn (e d!) (d! :focus path)
+                  :inner-text "\"Array"
+                =< 8 nil
+                -> data (get "\"items")
+                  comp-json-block (conj path "\"items") focus
+              "\"string" $ comp-literal data path (= path focus)
+              "\"number" $ comp-literal data path (= path focus)
+              "\"integer" $ comp-literal data path (= path focus)
+              "\"boolean" $ comp-literal data path (= path focus)
+        |comp-literal $ quote
+          defn comp-literal (rule path focused?)
             div
-              {}
-                :on-click $ fn (e d!) (d! :focus path)
-                :style $ if (= path focus)
+              {} $ :style
+                merge style-literal $ if focused?
                   {} (:border-radius "\"8px")
                     :background-color $ hsl 0 0 97
-              case-default (get data "\"type")
-                div ({})
-                  do (js/console.warn "\"Unkown data" data)
-                    <> $ str "\"Unknown data: data"
-                "\"object" $ let
-                    required-fields $ get data "\"required"
-                  div
-                    {} $ :style style-block
-                    <> "\"Object" $ {} (:font-family ui/font-fancy)
-                    list->
-                      {} $ :style
-                        {} $ :margin-left 8
-                      -> data (get "\"properties")
-                        .map-list $ fn (pair )
-                          let[] (k v) pair $ [] k
-                            div
-                              {} $ :style ui/row
-                              div
-                                {} $ :style
-                                  {} (:font-family ui/font-code)
-                                    :color $ hsl 200 90 60
-                                if
-                                  -> required-fields .to-list $ .includes? k
-                                  <> "\"*" $ {} (:color :red)
-                                <> k
-                              =< 8 nil
-                              comp-json-block v (conj path "\"properties" k) focus
-                "\"array" $ div
-                  {} $ :style (merge ui/row style-block)
-                  <> "\"Array" $ {} (:font-family ui/font-fancy)
-                  =< 8 nil
-                  -> data (get "\"items")
-                    comp-json-block (conj path "\"items") focus
-                "\"string" $ comp-literal data
-                "\"number" $ comp-literal data
-                "\"integer" $ comp-literal data
-                "\"boolean" $ comp-literal data
-        |comp-literal $ quote
-          defn comp-literal (rule)
-            div
-              {} $ :style style-literal
-              <> (get rule "\"type")
-                {} $ :font-family ui/font-fancy
+              span $ {}
+                :style $ {} (:font-family ui/font-fancy)
+                :on-click $ fn (e d!) (d! :focus path)
+                :inner-text $ get rule "\"type"
               if-let
                 mock $ get rule "\"mock"
                 span $ {}
@@ -136,6 +150,7 @@
           def style-block $ {}
             :border-left $ str "\"1px solid " (hsl 0 0 90)
             :padding-left 8
+            :display :inline-flex
         |style-literal $ quote
           def style-literal $ {} (:cursor :pointer) (:padding "\"2px 4px")
       :ns $ quote
