@@ -27,49 +27,57 @@
               ; js/console.log focus
               js/console.log $ get-in api-data focus
               div
-                {} $ :style (merge ui/global ui/fullscreen ui/column)
-                div
-                  {} $ :style
-                    {} $ :padding "\"4px 8px"
-                  button $ {} (:style ui/button) (:inner-text "\"Load")
-                    :on-click $ fn (e d!)
-                      ; println $ :content state
-                      .show prompt-plugin d! $ fn (text)
-                        d! :api-data $ to-calcit-data (js/JSON.parse text)
-                  =< 8 nil
-                  button $ {} (:style ui/button) (:inner-text "\"Reset")
-                    :on-click $ fn (e d!) (d! :reset nil)
-                  =< 24 nil
-                  button $ {} (:style ui/button) (:inner-text "\"Array")
-                    :on-click $ fn (e d!) (d! :wrap-array nil)
-                  =< 8 nil
-                  button $ {} (:style ui/button) (:inner-text "\"Object")
-                    :on-click $ fn (e d!) (d! :wrap-object nil)
-                  =< 8 nil
-                  button $ {} (:style ui/button) (:inner-text "\"Text")
-                    :on-click $ fn (e d!)
-                      let
-                          data $ to-js-data api-data
-                        copy! $ js/JSON.stringify data nil 2
-                        js/console.log "\"Copied" data
-                  =< 24 nil
-                  button $ {} (:style ui/button) (:inner-text "\"Copy")
-                    :on-click $ fn (e d!) (d! :copy nil)
-                  =< 4 nil
-                  if-let
-                    clipboard $ :clipboard store
-                    <> (get clipboard "\"type")
-                      {} (:font-family ui/font-fancy)
-                        :color $ hsl 0 0 70
-                  =< 4 nil
-                  button $ {} (:style ui/button) (:inner-text "\"Paste")
-                    :on-click $ fn (e d!) (d! :paste nil)
+                {} $ :style (merge ui/global ui/fullscreen ui/row)
                 div
                   {} $ :style
                     merge ui/expand ui/column $ {} (:padding "\"20px 20px")
                   div ({})
                     comp-json-block api-data ([]) focus
                   =< nil 200
+                div
+                  {} $ :style
+                    {} $ :padding "\"4px 8px"
+                  div ({})
+                    button $ {} (:style ui/button) (:inner-text "\"Load")
+                      :on-click $ fn (e d!)
+                        ; println $ :content state
+                        .show prompt-plugin d! $ fn (text)
+                          d! :api-data $ to-calcit-data (js/JSON.parse text)
+                    =< 8 nil
+                    button $ {} (:style ui/button) (:inner-text "\"Reset")
+                      :on-click $ fn (e d!) (d! :reset nil)
+                    =< 24 nil
+                    button $ {} (:style ui/button) (:inner-text "\"Array")
+                      :on-click $ fn (e d!) (d! :wrap-array nil)
+                    =< 8 nil
+                    button $ {} (:style ui/button) (:inner-text "\"Object")
+                      :on-click $ fn (e d!) (d! :wrap-object nil)
+                    =< 8 nil
+                    button $ {} (:style ui/button) (:inner-text "\"Set bool")
+                      :on-click $ fn (e d!) (d! :set-bool nil)
+                  =< 0 nil
+                  div ({})
+                    button $ {} (:style ui/button) (:inner-text "\"Copy Text")
+                      :on-click $ fn (e d!)
+                        let
+                            data $ to-js-data api-data
+                          copy! $ js/JSON.stringify data nil 2
+                          js/console.log "\"Copied" data
+                  =< 0 nil
+                  div ({})
+                    button $ {} (:style ui/button) (:inner-text "\"Copy Tree")
+                      :on-click $ fn (e d!) (d! :copy nil)
+                    =< 4 nil
+                    if-let
+                      clipboard $ :clipboard store
+                      <> (get clipboard "\"type")
+                        {} (:font-family ui/font-fancy)
+                          :color $ hsl 0 0 70
+                    =< 4 nil
+                    button $ {} (:style ui/button) (:inner-text "\"Paste Tree")
+                      :on-click $ fn (e d!) (d! :paste nil)
+                  =< 0 nil
+                  comp-named (>> states :named) (:memory store) (get-in api-data focus)
                 .render prompt-plugin
                 when dev? $ comp-reel (>> states :reel) reel ({})
         |comp-json-block $ quote
@@ -146,6 +154,32 @@
                 desc $ get rule "\"description"
                 <> desc $ {} (:margin-left 8) (:font-size 12)
                   :color $ hsl 0 0 80
+        |comp-named $ quote
+          defcomp comp-named ( states memory focus-data)
+            let
+                name-plugin $ use-prompt (>> states :name)
+                  {} $ :text "\"Name this item"
+              div ({})
+                div ({})
+                  button $ {} (:style ui/button) (:inner-text "\"Save")
+                    :on-click $ fn (e d!)
+                      .show name-plugin d! $ fn (text)
+                        d! :save-item $ [] text focus-data  
+                list-> ({})
+                  -> memory (.to-list)
+                    map $ fn (entry)
+                      let[] (k item) entry $ [] k
+                        div ({})
+                          span $ {}
+                            :style $ {} (:cursor :pointer) (:color :blue)
+                            :inner-text k
+                            :on-click $ fn (e d!) (d! :paste-with item)
+                          =< 8 nil
+                          span $ {}
+                            :style $ {} (:cursor :pointer) (:color :red)
+                            :on-click $ fn (e d!) (d! :remove-item k)
+                            :inner-text "\"✕"
+                .render name-plugin
         |style-block $ quote
           def style-block $ {}
             :border-left $ str "\"1px solid " (hsl 0 0 90)
@@ -231,6 +265,7 @@
             :version-0 nil
             :focus $ []
             :clipboard nil
+            :memory $ {}
       :ns $ quote (ns app.schema)
     |app.updater $ {}
       :defs $ {}
@@ -251,6 +286,9 @@
                 prepend (:focus store) :api-data
                 fn (x)
                   {} ("\"type" "\"array") ("\"items" x)
+              :set-bool $ assoc-in store
+                prepend (:focus store) :api-data
+                {} $ "\"type" "\"boolean"
               :copy $ let
                   data $ get-in (:api-data store) (:focus store)
                 assoc store :clipboard data
@@ -260,6 +298,14 @@
                 if (some? item)
                   update store :api-data $ fn (api) (assoc-in api focus item)
                   , store
+              :paste-with $ let
+                  focus $ :focus store
+                if (some? data)
+                  update store :api-data $ fn (api) (assoc-in api focus data)
+                  , store
+              :save-item $ let[] (name tree) data
+                assoc-in store ([] :memory name) tree
+              :remove-item $ dissoc-in store ([] :memory data)
               :hydrate-storage data
       :ns $ quote
         ns app.updater $ :require
