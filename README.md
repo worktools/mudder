@@ -15,6 +15,8 @@ https://github.com/calcit-lang/respo-calcit-workflow
 Use Calcit/procs 0.27.0, Node.js 24 and Yarn 4.18.0 with the canonical
 `calcit.cirru` and `deps.cirru`. Run `caps --strict --ci`, `yarn install --immutable`,
 then `yarn dev` or `yarn build`.
+Development keeps Calcit watch and Vite running together, stopping both when
+either exits. Production builds still compile once.
 
 CI keeps canonical formatting, strict entry/public contract checks and the
 actual frontend build. Main uploads frontend assets to
