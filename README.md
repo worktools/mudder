@@ -15,14 +15,17 @@ https://github.com/calcit-lang/respo-calcit-workflow
 Use Calcit/procs 0.27.0, Node.js 24 and Yarn 4.18.0 with the canonical
 `calcit.cirru` and `deps.cirru`. Run `caps --strict --ci`, `yarn install --immutable`,
 then `yarn dev` or `yarn build`.
-Development keeps Calcit watch and Vite running together, stopping both when
-either exits. Production builds still compile once.
+Run `yarn watch` in a separate terminal when editing Calcit. `yarn dev` compiles
+once before starting Vite; production builds also compile once. No extra process
+manager is needed.
 
 CI keeps canonical formatting, strict entry/public contract checks and the
 actual frontend build. Main uploads frontend assets to
-`https://cos-sh.tiye.me/worktools/mudder/` using COS action v1.1.1's built-in
+`https://cos-sh.tiye.me/worktools/mudder/` using COS action v1.2.0's built-in
 public verification. Pull requests only build; server sync retains the
 original `dist/*` source and destination. No separate upload checker is needed.
+Queued production runs check the current main revision once before publishing;
+stale revisions skip both COS upload and server sync.
 
 ### License
 
