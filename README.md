@@ -12,12 +12,29 @@ Named "mudder" since it sounds a bit like s**wagger**.
 
 https://github.com/calcit-lang/respo-calcit-workflow
 
-Use Calcit/procs 0.27.0, Node.js 24 and Yarn 4.18.0 with the canonical
+Use the paired Calcit/procs 0.30.1-alpha.5 candidate, Node.js 24 and Yarn 4.18.0 with the canonical
 `calcit.cirru` and `deps.cirru`. Run `caps --strict --ci`, `yarn install --immutable`,
 then `yarn dev` or `yarn build`.
 Run `yarn watch` in a separate terminal when editing Calcit. `yarn dev` compiles
 once before starting Vite; production builds also compile once. No extra process
 manager is needed.
+
+The formal 0.30.1 CLI assets and matching npm runtime are not yet available;
+do not mix the candidate CLI with another runtime version. Respo, Reel, UI,
+Alerts and js-ffi use exact formal releases in `deps.cirru`.
+
+### Existing saved data
+
+The `workflow` localStorage key and flat Map archive format are unchanged.
+Restoration validates the known fields and retains unknown root fields,
+Swagger extensions and named fragment values. A malformed archive pauses
+automatic saving and displays an error instead of overwriting the old data.
+Swagger JSON and heterogeneous Respo cursor state remain explicit open
+boundaries; application operations and the root store have concrete types.
+
+Run `calcit --check-only --all-defs`, `calcit fix --workflow strict --verify`
+and `calcit test --require-match` before building. Regression assertions live
+with the Store and updater definitions; no extra upload checker is required.
 
 CI keeps canonical formatting, strict entry/public contract checks and the
 actual frontend build. Main uploads frontend assets to
