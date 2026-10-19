@@ -363,7 +363,6 @@
           :require
             respo.core :refer $ render-with! clear-cache!
             respo.ffi.browser :as dom
-            respo.util :refer $ generate-id!
             app.comp.container :refer $ comp-container
             app.updater :refer $ updater
             app.schema :as schema
