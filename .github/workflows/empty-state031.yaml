@@ -1,0 +1,37 @@
+name: Temporary formal empty-state edit
+on:
+  pull_request:
+    paths:
+      - .github/workflows/empty-state031.yaml
+permissions:
+  contents: read
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: calcit-lang/setup-calcit@v1.5.0
+        with:
+          tools: calcit
+          deps-file: deps.cirru
+      - name: Keep real schema rendering and show absent-document hint
+        run: |
+          set -euo pipefail
+          out=.calcit/empty-state031
+          mkdir -p "$out"
+          git hash-object calcit.cirru > "$out/before-blob.txt"
+          operations='[["tree","wrap","app.comp.container/comp-container","--path","@3.2.2.2.2","--input-format","json-ast","--code","[\"if\",[\"nil?\",\"api-data\"],[\"<>\",\"|Load a Swagger schema to begin.\"],\"self\"]"]]'
+          calcit edit transaction --code "$operations" --dry-run --format json > "$out/preview.json"
+          revision="$(jq -er '.scoped_revision' "$out/preview.json")"
+          calcit edit transaction --code "$operations" --expect-revision "$revision" --format json > "$out/applied.json"
+          calcit analyze program-diff HEAD --format json > "$out/program-diff.json"
+          cp calcit.cirru "$out/calcit.cirru"
+      - uses: actions/upload-artifact@v7.0.0
+        with:
+          name: mudder-empty-state-source
+          path: .calcit/empty-state031/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
