@@ -12,16 +12,17 @@ Named "mudder" since it sounds a bit like s**wagger**.
 
 https://github.com/calcit-lang/respo-calcit-workflow
 
-Use the paired Calcit/procs 0.30.1-alpha.5 candidate, Node.js 24 and Yarn 4.18.0 with the canonical
+Use paired formal Calcit/procs 0.30.1, Node.js 24 and Yarn 4.18.0 with the canonical
 `calcit.cirru` and `deps.cirru`. Run `caps --strict --ci`, `yarn install --immutable`,
 then `yarn dev` or `yarn build`.
 Run `yarn watch` in a separate terminal when editing Calcit. `yarn dev` compiles
 once before starting Vite; production builds also compile once. No extra process
 manager is needed.
 
-The formal 0.30.1 CLI assets and matching npm runtime are not yet available;
-do not mix the candidate CLI with another runtime version. Respo, Reel, UI,
-Alerts and js-ffi use exact formal releases in `deps.cirru`.
+Respo 0.16.124, Reel 0.6.41, UI 0.8.0, Alerts 0.10.57 and js-ffi 0.2.5
+use exact formal releases in `deps.cirru`, with a consistent strict Caps graph.
+The 16 old source Option calls and two calls inside an original test use public
+methods; the six original business regressions and archive format are retained.
 
 ### Existing saved data
 
@@ -39,7 +40,9 @@ with the Store and updater definitions; no extra upload checker is required.
 CI keeps canonical formatting, strict entry/public contract checks and the
 actual frontend build. Main uploads frontend assets to
 `https://cos-sh.tiye.me/worktools/mudder/` using COS action v1.2.0's built-in
-public verification. Pull requests only build; server sync retains the
+public verification. Pull requests only build and retain a relative-URL artifact
+for interaction acceptance, without assuming an unuploaded PR CDN prefix exists;
+server sync retains the
 original `dist/*` source and destination. No separate upload checker is needed.
 Queued production runs check the current main revision once before publishing;
 stale revisions skip both COS upload and server sync.

@@ -70,7 +70,7 @@
                         d! $ schema/Op :copy
                     =< 4 nil
                     let
-                        clipboard $ option:unwrap-or (:clipboard store) nil
+                        clipboard $ .unwrap-or (:clipboard store) nil
                       if (non-nil? clipboard)
                         <>
                           decode-map-as
@@ -127,7 +127,7 @@
                           .to-list $ keys properties
                           fn (k)
                             let
-                                v $ option:unwrap $ get properties k
+                                v $ .unwrap $ get properties k
                               [] k $ div
                                 {} $ :style ui/row
                                 div
@@ -210,7 +210,7 @@
                     .to-list $ keys memory
                     fn (k)
                       let
-                          item $ option:unwrap $ get memory k
+                          item $ .unwrap $ get memory k
                         [] k $ div ({})
                           span $ {}
                             :style $ {} (:cursor :pointer) (:color :blue)
@@ -307,7 +307,7 @@
             try
               do
                 match
-                  browser/storage-get $ option:unwrap $ get config/site :storage-key
+                  browser/storage-get $ .unwrap $ get config/site :storage-key
                   (:some raw)
                     dispatch! $ schema/Op :hydrate-storage $ schema/decode-store (parse-cirru-edn raw)
                   (:none) &unit
@@ -322,14 +322,14 @@
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
-            option:unwrap $ dom/query-selector |.app
+            .unwrap $ dom/query-selector |.app
           :examples $ []
           :schema $ :: 'respo.dom/DomElement
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ try
               browser/storage-set!
-                option:unwrap $ get config/site :storage-key
+                .unwrap $ get config/site :storage-key
                 format-cirru-edn $ schema/serialize-store $ :store @*reel
               fn (message)
                 hud! |error $ str "|Could not save locally: " message
@@ -442,24 +442,24 @@
           :code $ quote $ defn decode-store (raw)
             let
                 fields $ decode-map-as raw $ :: 'Map 'Tag 'Dynamic
-                clipboard $ option:unwrap-or (get fields :clipboard) nil
+                clipboard $ .unwrap-or (get fields :clipboard) nil
               Store :states
                 decode-map-as
-                  option:unwrap-or (get fields :states) ({})
+                  .unwrap-or (get fields :states) ({})
                   :: 'Map 'Dynamic 'Dynamic
                 , :api-data
-                  optional-schema $ option:unwrap-or (get fields :api-data) nil
+                  optional-schema $ .unwrap-or (get fields :api-data) nil
                   , :version-0
-                    optional-schema $ option:unwrap-or (get fields :version-0) nil
+                    optional-schema $ .unwrap-or (get fields :version-0) nil
                     , :focus
                       decode-map-as
-                        option:unwrap-or (get fields :focus) ([])
+                        .unwrap-or (get fields :focus) ([])
                         :: 'List 'String
                       , :clipboard
                         if (nil? clipboard) (Option :none) (Option :some clipboard)
                         , :memory
                           decode-map-as
-                            option:unwrap-or (get fields :memory) ({})
+                            .unwrap-or (get fields :memory) ({})
                             :: 'Map 'String 'Dynamic
                           , :extra $ dissoc
                             dissoc
@@ -514,7 +514,7 @@
             :return $ :: 'Option $ :: 'Map 'String 'Dynamic
         'optional-value $ %{} 'CodeEntry
           :doc "|Legacy storage serialization boundary: retain JSON/EDN nil for absent fields; business state uses Option."
-          :code $ quote $ defn optional-value (value) (option:unwrap-or value nil)
+          :code $ quote $ defn optional-value (value) (.unwrap-or value nil)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] $ :: 'Option 'Dynamic
@@ -560,7 +560,7 @@
         'put-focus $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn put-focus (store value)
             let
-                api $ option:unwrap-or (:api-data store) ({})
+                api $ .unwrap-or (:api-data store) ({})
                 updated $ decode-map-as
                   assoc-in api (:focus store) value
                   :: 'Map 'String 'Dynamic
@@ -586,10 +586,10 @@
               (:wrap-object)
                 put-focus store $ {} (|type |object)
                   |properties $ {} $ |data
-                    option:unwrap-or (focused-value store) nil
+                    .unwrap-or (focused-value store) nil
               (:wrap-array)
                 put-focus store $ {} (|type |array)
-                  |items $ option:unwrap-or (focused-value store) nil
+                  |items $ .unwrap-or (focused-value store) nil
               (:set-bool)
                 put-focus store $ {} $ |type |boolean
               (:copy)
@@ -630,12 +630,12 @@
                   removed $ updater saved (app.schema/Op :remove-item |nullable) |remove 9
                 assert= (Option :some |array)
                   get-in
-                    option:unwrap $ :api-data wrapped
+                    .unwrap $ :api-data wrapped
                     [] |properties |flag |type
                 assert=
                   Option :some $ [] false nil
                   get-in
-                    option:unwrap $ :api-data wrapped
+                    .unwrap $ :api-data wrapped
                     [] |properties |flag |items |x-extension
                 assert= (:api-data wrapped) (:api-data pasted)
                 assert= (Option :some source) (:api-data reset)

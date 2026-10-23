@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@calcit/procs": "0.30.1-alpha.5",
+    "@calcit/procs": "0.30.1",
     "copy-text-to-clipboard": "^3.0.1"
   },
   "devDependencies": {
@@ -10,7 +10,7 @@
   "version": "0.0.1",
   "packageManager": "yarn@4.18.0",
   "scripts": {
-    "compile": "calcit",
+    "compile": "calcit calcit.cirru js",
     "watch": "calcit -w",
     "build": "yarn compile && vite build",
     "dev": "yarn compile && vite"
