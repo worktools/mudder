@@ -27,7 +27,8 @@
                   {} $ :style $ merge ui/expand ui/column
                     {} $ :padding "|20px 20px"
                   div ({})
-                    comp-json-block api-data ([]) focus
+                    if (nil? api-data) (<> "|Load a Swagger schema to begin.")
+                      comp-json-block api-data ([]) focus
                   =< nil 200
                 div
                   {} $ :style $ {} (:padding "|4px 8px")

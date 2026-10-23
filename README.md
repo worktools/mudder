@@ -32,6 +32,9 @@ Swagger extensions and named fragment values. A malformed archive pauses
 automatic saving and displays an error instead of overwriting the old data.
 Swagger JSON and heterogeneous Respo cursor state remain explicit open
 boundaries; application operations and the root store have concrete types.
+Before any document is loaded, the UI shows an import hint instead of warning
+about an unknown schema. Imported documents still go through the original renderer
+and invalid-schema warnings; this does not treat invalid data as an empty document.
 
 Run `calcit --check-only --all-defs`, `calcit fix --workflow strict --verify`
 and `calcit test --require-match` before building. Regression assertions live
