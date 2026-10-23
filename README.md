@@ -49,6 +49,8 @@ server sync retains the
 original `dist/*` source and destination. No separate upload checker is needed.
 Queued production runs check the current main revision once before publishing;
 stale revisions skip both COS upload and server sync.
+Credential-bearing COS/rsync actions retain their original full commit pins with
+release labels. Calcit modules still use exact formal version tags.
 
 ### License
 
