@@ -17,6 +17,8 @@ UI 升级可能带来样式差异，不承诺逐像素相同。本轮不授权�
 
 六处 Map merge 改用 `.merge`，十六处静态 CSS 叶子改为等价 String，
 两份静态样式类型从 Map Tag Dynamic 收紧为 Map Tag String。
+Load/Save 两处事件按真实 Respo EventHandler 声明 dispatch，两个 Prompt 文本回调明确 String→Unit；
+修复新依赖图下原先两处完整 strict 失败，不使用伪 Enum 参数或强转。
 Swagger 与 Respo 状态仍保留真实异构边界，原六项业务测试和断言不变；
 不增加强转、质量预算、防御测试、重复 COS 校验或过程管理器。
 
