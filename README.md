@@ -8,6 +8,18 @@ Demo https://r.tiye.me/worktools/mudder/ .
 
 Named "mudder" since it sounds a bit like s**wagger**.
 
+### 本轮使用者影响
+
+继续配对正式 Calcit / procs 0.30.1，升级精确正式依赖后需要重新安装、重启开发服务并完整刷新。
+Swagger 文档、命名片段、内部 Copy/Paste、未知扩展字段和 `workflow` 存档格式保持；
+不清空或迁移用户存档，不修改自动保存保护与实际 `hud!` 提示。
+UI 升级可能带来样式差异，不承诺逐像素相同。本轮不授权合并、部署或发版。
+
+六处 Map merge 改用 `.merge`，十六处静态 CSS 叶子改为等价 String，
+两份静态样式类型从 Map Tag Dynamic 收紧为 Map Tag String。
+Swagger 与 Respo 状态仍保留真实异构边界，原六项业务测试和断言不变；
+不增加强转、质量预算、防御测试、重复 COS 校验或过程管理器。
+
 ### Workflow
 
 https://github.com/calcit-lang/respo-calcit-workflow
@@ -19,7 +31,7 @@ Run `yarn watch` in a separate terminal when editing Calcit. `yarn dev` compiles
 once before starting Vite; production builds also compile once. No extra process
 manager is needed.
 
-Respo 0.16.124, Reel 0.6.41, UI 0.8.0, Alerts 0.10.57 and js-ffi 0.2.5
+Respo 0.16.126, Reel 0.6.42, UI 0.8.1, Alerts 0.10.58 and js-ffi 0.2.6
 use exact formal releases in `deps.cirru`, with a consistent strict Caps graph.
 The 16 old source Option calls and two calls inside an original test use public
 methods; the six original business regressions and archive format are retained.
