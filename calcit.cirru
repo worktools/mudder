@@ -22,9 +22,9 @@
                 focus $ :focus store
                 api-data $ schema/optional-value $ :api-data store
               div
-                {} $ :style $ merge ui/global ui/fullscreen ui/row
+                {} $ :style $ .merge ui/global ui/fullscreen ui/row
                 div
-                  {} $ :style $ merge ui/expand ui/column
+                  {} $ :style $ .merge ui/expand ui/column
                     {} $ :padding "|20px 20px"
                   div ({})
                     if (nil? api-data) (<> "|Load a Swagger schema to begin.")
@@ -35,8 +35,15 @@
                   div ({})
                     button $ {} (:style ui/button) (:inner-text |Load)
                       :on-click $ fn (e d!)
+                        hint-fn $ {} (:return 'Unit)
+                          :args $ [] (:: 'Map 'Tag 'Dynamic)
+                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                              :args $ [] 'Dynamic
                         ; println $ :content state
                         .show prompt-plugin d! $ fn (text)
+                          hint-fn $ {}
+                            :args $ [] 'String
+                            :return 'Unit
                           d! $ schema/Op :api-data $ decode-map-as
                             to-calcit-data $ js/JSON.parse text
                             :: 'Map 'String 'Dynamic
@@ -107,19 +114,19 @@
                       .unwrap-or (get data |required) ([])
                       :: 'List 'String
                   div
-                    {} $ :style $ merge style-block
-                      {} $ :flex-direction :column
+                    {} $ :style $ .merge style-block
+                      {} $ :flex-direction |column
                       if (= path focus)
                         {} (:border-radius |8px)
                           :background-color $ hsl 0 0 97
                         {}
                     span $ {}
-                      :style $ {} (:cursor :pointer) (:font-family ui/font-fancy)
+                      :style $ {} (:cursor |pointer) (:font-family ui/font-fancy)
                       :inner-text |Object
                       :on-click $ fn (e d!)
                         d! $ schema/Op :focus path
                     list->
-                      {} $ :style $ {} (:margin-left 8)
+                      {} $ :style $ {} (:margin-left |8px)
                       let
                           properties $ decode-map-as
                             .unwrap-or (get data |properties) ({})
@@ -136,20 +143,20 @@
                                     :color $ hsl 200 90 60
                                   if
                                     -> required-fields $ .includes? k
-                                    <> |* $ {} $ :color :red
+                                    <> |* $ {} $ :color |red
                                   <> k
                                 =< 8 nil
                                 comp-json-block v
                                   conj (conj path |properties) k
                                   , focus
                 |array $ div
-                  {} $ :style $ merge ui/row style-block
+                  {} $ :style $ .merge ui/row style-block
                     if (= path focus)
                       {} (:border-radius |8px)
                         :background-color $ hsl 0 0 97
                       {}
                   span $ {}
-                    :style $ {} (:cursor :pointer) (:font-family ui/font-fancy)
+                    :style $ {} (:cursor |pointer) (:font-family ui/font-fancy)
                     :on-click $ fn (e d!)
                       d! $ schema/Op :focus path
                     :inner-text |Array
@@ -169,7 +176,7 @@
         'comp-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-literal (rule path focused?)
             div
-              {} $ :style $ merge style-literal
+              {} $ :style $ .merge style-literal
                 if focused?
                   {} (:border-radius |8px)
                     :background-color $ hsl 0 0 97
@@ -182,14 +189,14 @@
               match (get rule |mock)
                 (:some mock)
                   span $ {}
-                    :style $ {} (:margin-left 8) (:font-size 10) (:font-family ui/font-code)
+                    :style $ {} (:margin-left |8px) (:font-size |10px) (:font-family ui/font-code)
                       :color $ hsl 200 40 70
                     :inner-text $ .unwrap-or (get mock |mock) nil
                 (:none) nil
               match (get rule |description)
                 (:some desc)
                   <> (decode-map-as desc 'String)
-                    {} (:margin-left 8) (:font-size 12)
+                    {} (:margin-left |8px) (:font-size |12px)
                       :color $ hsl 0 0 80
                 (:none) nil
           :examples $ []
@@ -204,7 +211,14 @@
                 div ({})
                   button $ {} (:style ui/button) (:inner-text |Save)
                     :on-click $ fn (e d!)
+                      hint-fn $ {} (:return 'Unit)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show name-plugin d! $ fn (text)
+                        hint-fn $ {}
+                          :args $ [] 'String
+                          :return 'Unit
                         d! $ schema/Op :save-item text focus-data
                 list-> ({})
                   map
@@ -214,13 +228,13 @@
                           item $ .unwrap $ get memory k
                         [] k $ div ({})
                           span $ {}
-                            :style $ {} (:cursor :pointer) (:color :blue)
+                            :style $ {} (:cursor |pointer) (:color |blue)
                             :inner-text k
                             :on-click $ fn (e d!)
                               d! $ schema/Op :paste-with item
                           =< 8 nil
                           span $ {}
-                            :style $ {} (:cursor :pointer) (:color :red)
+                            :style $ {} (:cursor |pointer) (:color |red)
                             :on-click $ fn (e d!)
                               d! $ schema/Op :remove-item k
                             :inner-text "|✕"
@@ -232,15 +246,15 @@
           :code $ quote $ def style-block
             {}
               :border-left $ str "|1px solid " $ hsl 0 0 90
-              :padding-left 8
-              :display :inline-flex
+              :padding-left |8px
+              :display |inline-flex
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ :: 'Map 'Tag 'String
         'style-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-literal
-            {} (:cursor :pointer) (:padding "|2px 4px")
+            {} (:cursor |pointer) (:padding "|2px 4px")
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ :: 'Map 'Tag 'String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require (respo-ui.core :as ui)
@@ -521,7 +535,7 @@
             :args $ [] $ :: 'Option 'Dynamic
         'serialize-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn serialize-store (value)
-            merge (:extra value)
+            .merge (:extra value)
               {}
                 :states $ :states value
                 :api-data $ optional-value $ :api-data value
