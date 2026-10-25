@@ -104,11 +104,8 @@
             let
                 data $ if (nil? data) ({})
                   decode-map-as data $ :: 'Map 'String 'Dynamic
-              case-default
+              match
                 .unwrap-or (get data |type) nil
-                div ({})
-                  do (js/console.warn "|Unkown data" data)
-                    <> $ str "|Unknown data: data"
                 |object $ let
                     required-fields $ decode-map-as
                       .unwrap-or (get data |required) ([])
@@ -169,6 +166,9 @@
                 |number $ comp-literal data path $ = path focus
                 |integer $ comp-literal data path $ = path focus
                 |boolean $ comp-literal data path $ = path focus
+                _ $ div ({})
+                  do (js/console.warn "|Unkown data" data)
+                    <> $ str "|Unknown data: data"
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
             :args $ [] 'Dynamic (:: 'List 'String) (:: 'List 'String)
