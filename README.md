@@ -10,6 +10,12 @@ Named "mudder" since it sounds a bit like s**wagger**.
 
 ### 本轮使用者影响
 
+仅将 Swagger 类型的字符串 `case-default` 改为 literal `match`，保留六个原分支的顺序、
+未知类型的警告与默认渲染。正式 0.30.1 依赖图、存档、剪贴板行为、原六项测试和实际
+`hud!` 不变；不增加验证脚本，不进行数据验收，不合并部署。
+
+### 既有正式图迁移记录
+
 继续配对正式 Calcit / procs 0.30.1，升级精确正式依赖后需要重新安装、重启开发服务并完整刷新。
 Swagger 文档、命名片段、内部 Copy/Paste、未知扩展字段和 `workflow` 存档格式保持；
 不清空或迁移用户存档，不修改自动保存保护与实际 `hud!` 提示。
