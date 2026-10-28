@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |alerts.calcit/
-      :type-slots $ {}
+      :type-slots $ {} $ :dispatch-op |app.schema/DispatchOp
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
@@ -47,6 +47,7 @@
                           d! $ schema/Op :api-data $ decode-map-as
                             to-calcit-data $ js/JSON.parse text
                             :: 'Map 'String 'Dynamic
+                        , &unit
                     =< 8 nil
                     button $ {} (:style ui/button) (:inner-text |Reset)
                       :on-click $ fn (e d!)
@@ -92,7 +93,12 @@
                         d! $ schema/Op :paste
                   =< 0 nil
                   comp-named (>> states :named) (:memory store)
-                    .unwrap-or (get-in api-data focus) nil
+                    match (get-in api-data focus)
+                      (:ok value) value
+                      (:err error)
+                        match error
+                          (:missing) nil
+                          (:shape message) (raise message)
                 .render prompt-plugin
                 when dev? $ comp-typed-reel (>> states :reel) reel $ {}
           :examples $ []
@@ -220,6 +226,7 @@
                           :args $ [] 'String
                           :return 'Unit
                         d! $ schema/Op :save-item text focus-data
+                      , &unit
                 list-> ({})
                   map
                     .to-list $ keys memory
@@ -390,6 +397,10 @@
             |bottom-tip :default hud!
     'app.schema $ %{} 'FileEntry
       :defs $ {}
+        'DispatchOp $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ def DispatchOp (:: :unhandled)
+          :examples $ []
+          :schema $ :: 'Enum
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :states (:: 'List 'Dynamic) 'Dynamic
@@ -564,9 +575,12 @@
               (:some api)
                 match
                   get-in api $ :focus store
-                  (:some value)
+                  (:ok value)
                     if (nil? value) (Option :none) (Option :some value)
-                  (:none) (Option :none)
+                  (:err error)
+                    match error
+                      (:missing) (Option :none)
+                      (:shape message) (raise message)
               (:none) (Option :none)
           :examples $ []
           :schema $ :: 'Fn $ {}
@@ -643,12 +657,12 @@
                   reset $ updater pasted (app.schema/Op :reset) |reset 7
                   saved $ updater reset (app.schema/Op :save-item |nullable nil) |save 8
                   removed $ updater saved (app.schema/Op :remove-item |nullable) |remove 9
-                assert= (Option :some |array)
+                assert= (Result :ok |array)
                   get-in
                     .unwrap $ :api-data wrapped
                     [] |properties |flag |type
                 assert=
-                  Option :some $ [] false nil
+                  Result :ok $ [] false nil
                   get-in
                     .unwrap $ :api-data wrapped
                     [] |properties |flag |items |x-extension
@@ -667,7 +681,7 @@
                     app.schema/Op :states ([] :dialog |name)
                       {} $ :text |draft
                     , |state 1
-                assert= (Option :some |draft)
+                assert= (Result :ok |draft)
                   get-in (:states updated) ([] :dialog |name :data :text)
                 assert= false $ contains? (:states updated) :states
                 assert= (:api-data initial) (:api-data updated)
