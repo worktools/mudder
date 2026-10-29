@@ -8,9 +8,9 @@ Demo https://r.tiye.me/worktools/mudder/ .
 
 Named "mudder" since it sounds a bit like s**wagger**.
 
-### 0.32.0 迁移候选对使用者的影响
+### 0.32.1 迁移候选对使用者的影响
 
-CLI 与 `@calcit/procs` 配对正式 `0.32.0`，需重新生成 JS 并刷新页面。
+CLI 与 `@calcit/procs` 配对正式 `0.32.1`，需重新生成 JS 并刷新页面。
 Respo `0.17.0`、Reel `0.7.0`、UI `0.9.0`、Alerts `0.11.0` 当前用本地候选图验收，
 JS-FFI 使用正式 `0.2.8`；候选依赖的正式发布整图与 PR CI 尚待验证，不能据此部署。
 
@@ -20,6 +20,9 @@ JS-FFI 使用正式 `0.2.8`；候选依赖的正式发布整图与 PR CI 尚待�
 刷新恢复通过，控制台无警告或错误。未新增系统剪贴板、命名片段或坏存档验收。
 保留 `hud!`、存档合同、原门禁及部署条件。COS/rsync 使用已核对的精确正式 action tag，
 npm 包年龄门禁为一小时，无白名单；不增加校验脚本，不放宽类型合同。
+
+0.32.1 补丁复核已通过原门禁与构建；页面验收沿用此前 0.32.0 的记录。
+官方 patch 未改运行时源码，本轮未重复浏览器交互，不将静态复核表述为新页面验收。
 
 ### 历史：0.31.0 使用者影响
 
@@ -52,7 +55,7 @@ Swagger 与 Respo 状态仍保留真实异构边界，原六项业务测试和�
 
 https://github.com/calcit-lang/respo-calcit-workflow
 
-Use paired formal Calcit/procs 0.32.0, Node.js 24 and Yarn 4.18.0 with the canonical
+Use paired formal Calcit/procs 0.32.1, Node.js 24 and Yarn 4.18.0 with the canonical
 `calcit.cirru` and `deps.cirru`. Run `caps --strict --ci`, `yarn install --immutable`,
 then `yarn dev` or `yarn build`.
 Run `yarn watch` in a separate terminal when editing Calcit. `yarn dev` compiles
