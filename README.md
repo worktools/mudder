@@ -8,7 +8,20 @@ Demo https://r.tiye.me/worktools/mudder/ .
 
 Named "mudder" since it sounds a bit like s**wagger**.
 
-### 本轮使用者影响
+### 0.32.0 迁移候选对使用者的影响
+
+CLI 与 `@calcit/procs` 配对正式 `0.32.0`，需重新生成 JS 并刷新页面。
+Respo `0.17.0`、Reel `0.7.0`、UI `0.9.0`、Alerts `0.11.0` 当前用本地候选图验收，
+JS-FFI 使用正式 `0.2.8`；候选依赖的正式发布整图与 PR CI 尚待验证，不能据此部署。
+
+官方工具转换 15 处类型写法，28 个定义 schema 不变；原测试中一处函数类型标注同步转换，
+六项测试的业务断言保持。239 个定义、完整 strict、原六项测试、不可变安装和构建通过。
+实际浏览器导入合成 schema、渲染必填字段和嵌套数组、选中字段包装数组、修改布尔类型及
+刷新恢复通过，控制台无警告或错误。未新增系统剪贴板、命名片段或坏存档验收。
+保留 `hud!`、存档合同、原门禁及部署条件。COS/rsync 使用已核对的精确正式 action tag，
+npm 包年龄门禁为一小时，无白名单；不增加校验脚本，不放宽类型合同。
+
+### 历史：0.31.0 使用者影响
 
 配对升级到正式 Calcit / procs 0.31.0，需重新安装依赖并完整刷新页面。
 Respo、Reel、UI 和 Alerts 当前配套 tag 仍为已发布的精确 alpha 版本，
@@ -39,15 +52,16 @@ Swagger 与 Respo 状态仍保留真实异构边界，原六项业务测试和�
 
 https://github.com/calcit-lang/respo-calcit-workflow
 
-Use paired formal Calcit/procs 0.31.0, Node.js 24 and Yarn 4.18.0 with the canonical
+Use paired formal Calcit/procs 0.32.0, Node.js 24 and Yarn 4.18.0 with the canonical
 `calcit.cirru` and `deps.cirru`. Run `caps --strict --ci`, `yarn install --immutable`,
 then `yarn dev` or `yarn build`.
 Run `yarn watch` in a separate terminal when editing Calcit. `yarn dev` compiles
 once before starting Vite; production builds also compile once. No extra process
 manager is needed.
 
-Respo 0.17.0-alpha.4, Reel 0.7.0-alpha.4, UI 0.9.0-alpha.4,
-Alerts 0.11.0-alpha.3 and js-ffi 0.2.7 use exact published tags in `deps.cirru`, with a consistent strict Caps graph.
+The previous 0.31.0 migration used Respo 0.17.0-alpha.4, Reel 0.7.0-alpha.4,
+UI 0.9.0-alpha.4, Alerts 0.11.0-alpha.3 and js-ffi 0.2.7. That published graph
+does not validate the current 0.32.0 candidates listed above.
 The 16 old source Option calls and two calls inside an original test use public
 methods; the six original business regressions and archive format are retained.
 
@@ -76,8 +90,8 @@ server sync retains the
 original `dist/*` source and destination. No separate upload checker is needed.
 Queued production runs check the current main revision once before publishing;
 stale revisions skip both COS upload and server sync.
-Credential-bearing COS/rsync actions retain their original full commit pins with
-release labels. Calcit modules still use exact formal version tags.
+COS/rsync actions use exact verified release tags. Calcit candidate module tags are
+listed above; local validation does not prove that the published dependency graph is available.
 
 ### License
 
