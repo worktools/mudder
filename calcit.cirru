@@ -35,15 +35,12 @@
                   div ({})
                     button $ {} (:style ui/button) (:inner-text |Load)
                       :on-click $ fn (e d!)
-                        hint-fn $ {} (:return 'Unit)
-                          :args $ [] (:: 'Map 'Tag 'Dynamic)
-                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                              :args $ [] 'Dynamic
+                        hint-fn $ Fn (Map Tag Dynamic)
+                          Fn Dynamic & Dynamic $ -> Unit
+                          -> Unit
                         ; println $ :content state
                         .show prompt-plugin d! $ fn (text)
-                          hint-fn $ {}
-                            :args $ [] 'String
-                            :return 'Unit
+                          hint-fn $ Fn String $ -> Unit
                           d! $ schema/Op :api-data $ decode-map-as
                             to-calcit-data $ js/JSON.parse text
                             :: 'Map 'String 'Dynamic
@@ -102,9 +99,7 @@
                 .render prompt-plugin
                 when dev? $ comp-typed-reel (>> states :reel) reel $ {}
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'reel.typed/State 'app.schema/Op 'app.schema/Store
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store) (-> respo.schema/Component) (:features :js-ffi)
         'comp-json-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-json-block (data path focus)
             let
@@ -176,9 +171,7 @@
                   do (js/console.warn "|Unkown data" data)
                     <> $ str "|Unknown data: data"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
-            :args $ [] 'Dynamic (:: 'List 'String) (:: 'List 'String)
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Dynamic (List String) (List String) (-> respo.schema/Element) (:features :js-ffi)
         'comp-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-literal (rule path focused?)
             div
@@ -206,8 +199,7 @@
                       :color $ hsl 0 0 80
                 (:none) nil
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
-            :args $ [] (:: 'Map 'String 'Dynamic) (:: 'List 'String) 'Bool
+          :schema $ quote $ Fn (Map String Dynamic) (List String) Bool (-> respo.schema/Element)
         'comp-named $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-named (states memory focus-data)
             let
@@ -217,14 +209,11 @@
                 div ({})
                   button $ {} (:style ui/button) (:inner-text |Save)
                     :on-click $ fn (e d!)
-                      hint-fn $ {} (:return 'Unit)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Unit
                       .show name-plugin d! $ fn (text)
-                        hint-fn $ {}
-                          :args $ [] 'String
-                          :return 'Unit
+                        hint-fn $ Fn String $ -> Unit
                         d! $ schema/Op :save-item text focus-data
                       , &unit
                 list-> ({})
@@ -247,8 +236,7 @@
                             :inner-text "|✕"
                 .render name-plugin
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Dynamic 'Dynamic) (:: 'Map 'String 'Dynamic) 'Dynamic
+          :schema $ quote $ Fn (Map Dynamic Dynamic) (Map String Dynamic) Dynamic (-> respo.schema/Component)
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
@@ -256,12 +244,12 @@
               :padding-left |8px
               :display |inline-flex
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ quote $ Map Tag String
         'style-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-literal
             {} (:cursor |pointer) (:padding "|2px 4px")
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ quote $ Map Tag String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require (respo-ui.core :as ui)
@@ -279,12 +267,12 @@
           :code $ quote $ def dev?
             = |dev $ .unwrap-or (get-env |mode) |release
           :examples $ []
-          :schema $ :: 'Bool
+          :schema $ quote Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             {} $ :storage-key |workflow
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ quote $ Map Tag String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.config
     'app.main $ %{} 'FileEntry
@@ -298,11 +286,11 @@
               :display? false
               :merged? false
           :examples $ []
-          :schema $ :: 'Ref $ :: 'reel.typed/State 'app.schema/Op 'app.schema/Store
+          :schema $ quote $ Ref (reel.typed/State app.schema/Op app.schema/Store)
         '*storage-ready? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *storage-ready? false
           :examples $ []
-          :schema $ :: 'Ref 'Bool
+          :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op)
             when config/dev? $ println |Dispatch: op
@@ -315,8 +303,7 @@
               raise "|Expected an operation Enum"
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> Unit)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -339,14 +326,12 @@
             println "|App started."
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
             .unwrap $ dom/query-selector |.app
           :examples $ []
-          :schema $ :: 'respo.dom/DomElement
+          :schema $ quote respo.dom/DomElement
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ try
@@ -357,8 +342,7 @@
                 hud! |error $ str "|Could not save locally: " message
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! ()
             if (js-nullish? build-errors)
@@ -369,17 +353,14 @@
               hud! |error build-errors
             println |Reloaded
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! mount-target
               fn () $ comp-container @*reel
               , dispatch!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
@@ -400,36 +381,38 @@
         'DispatchOp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def DispatchOp (:: :unhandled)
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ quote Enum
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states (:: 'List 'Dynamic) 'Dynamic
-            :api-data $ :: 'Map 'String 'Dynamic
+            :states
+              quote $ List Dynamic
+              , 'Dynamic
+            :api-data $ quote $ Map String Dynamic
             :reset
             :wrap-object
             :wrap-array
             :set-bool
             :copy
             :paste
-            :focus $ :: 'List 'String
+            :focus $ quote $ List String
             :paste-with 'Dynamic
             :save-item 'String 'Dynamic
             :remove-item 'String
             :hydrate-storage 'app.schema/Store
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'Store $ %{} 'CodeEntry
           :doc "|Root application state. Swagger values and heterogeneous Respo state remain honest open boundaries; extra preserves unknown legacy root fields."
           :code $ quote $ defstruct Store
-            :states $ :: 'Map 'Dynamic 'Dynamic
-            :api-data $ :: 'Option $ :: 'Map 'String 'Dynamic
-            :version-0 $ :: 'Option $ :: 'Map 'String 'Dynamic
-            :focus $ :: 'List 'String
-            :clipboard $ :: 'Option 'Dynamic
-            :memory $ :: 'Map 'String 'Dynamic
-            :extra $ :: 'Map 'Tag 'Dynamic
+            :states $ quote $ Map Dynamic Dynamic
+            :api-data $ quote $ Option (Map String Dynamic)
+            :version-0 $ quote $ Option (Map String Dynamic)
+            :focus $ quote $ List String
+            :clipboard $ quote $ Option Dynamic
+            :memory $ quote $ Map String Dynamic
+            :extra $ quote $ Map Tag Dynamic
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
           :tests $ []
             %{} 'TestEntry (:name |legacy-extra-fields-and-memory)
               :code $ quote $ let
@@ -449,9 +432,7 @@
                     decode-store $ assoc (serialize-store store) :focus $ [] 7
                     , false
                   fn (message)
-                    hint-fn $ {}
-                      :args $ [] 'String
-                      :return 'Bool
+                    hint-fn $ Fn String $ -> Bool
                     includes? message "|expected string"
               :tags $ #{} :unit
             %{} 'TestEntry (:name |saved-map-roundtrip)
@@ -497,8 +478,7 @@
                               , :clipboard
                             , :memory
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Store)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.schema/Store)
         'normalize-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-op (op)
             match op
@@ -528,22 +508,19 @@
                   decode-store data
               _ $ raise |Unknown-operation
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
-            :args $ [] 'Enum
+          :schema $ quote $ Fn Enum (-> app.schema/Op)
         'optional-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn optional-schema (raw)
             if (nil? raw) (Option :none)
               Option :some $ decode-map-as raw $ :: 'Map 'String 'Dynamic
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Option $ :: 'Map 'String 'Dynamic
+          :schema $ quote $ Fn Dynamic
+            -> $ Option $ Map String Dynamic
         'optional-value $ %{} 'CodeEntry
           :doc "|Legacy storage serialization boundary: retain JSON/EDN nil for absent fields; business state uses Option."
           :code $ quote $ defn optional-value (value) (.unwrap-or value nil)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
-            :args $ [] $ :: 'Option 'Dynamic
+          :schema $ quote $ Fn (Option Dynamic) (-> Dynamic)
         'serialize-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn serialize-store (value)
             .merge (:extra value)
@@ -555,16 +532,15 @@
                 :clipboard $ optional-value $ :clipboard value
                 :memory $ :memory value
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'app.schema/Store
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn app.schema/Store
+            -> $ Map Tag Dynamic
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
             Store :states
               {} $ :cursor $ []
               , :api-data (Option :none) :version-0 (Option :none) :focus ([]) :clipboard (Option :none) :memory ({}) :extra $ {}
           :examples $ []
-          :schema $ :: 'app.schema/Store
+          :schema $ quote app.schema/Store
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -583,9 +559,8 @@
                       (:shape message) (raise message)
               (:none) (Option :none)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'app.schema/Store
-            :return $ :: 'Option 'Dynamic
+          :schema $ quote $ Fn app.schema/Store
+            -> $ Option Dynamic
         'put-focus $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn put-focus (store value)
             let
@@ -595,8 +570,7 @@
                   :: 'Map 'String 'Dynamic
               struct-with store $ :api-data $ Option :some updated
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Store)
-            :args $ [] 'app.schema/Store 'Dynamic
+          :schema $ quote $ Fn app.schema/Store Dynamic (-> app.schema/Store)
         'updater $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater (store op op-id op-time)
             match op
@@ -635,9 +609,7 @@
                 struct-with store $ :memory $ dissoc (:memory store) name
               (:hydrate-storage data) data
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Store)
-            :args $ [] 'app.schema/Store 'app.schema/Op 'String 'Number
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.schema/Store app.schema/Op String Number (-> app.schema/Store) (:features :js-ffi)
           :tests $ []
             %{} 'TestEntry (:name |focus-edit-copy-reset-and-memory)
               :code $ quote $ let
