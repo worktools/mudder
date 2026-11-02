@@ -517,6 +517,19 @@
               _ $ raise |Unknown-operation
           :examples $ []
           :schema $ quote $ Fn Enum (-> app.schema/Op)
+          :tests $ [] $ %{} 'TestEntry (:name |checked-state-cursor)
+            :code $ quote $ let
+                cursor $ [] :dialog |name 0
+              assert= (Op :states cursor false)
+                normalize-op $ :: :states cursor false
+              assert |reject-bool-cursor $ try
+                do
+                  normalize-op $ :: :states ([] true) false
+                  , false
+                fn (message)
+                  hint-fn $ Fn String $ -> Bool
+                  includes? message |CursorKey
+            :tags $ #{} :unit
         'optional-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn optional-schema (raw)
             if (nil? raw) (Option :none)
