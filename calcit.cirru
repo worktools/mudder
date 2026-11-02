@@ -43,7 +43,7 @@
                           hint-fn $ Fn String $ -> Unit
                           d! $ schema/Op :api-data $ decode-map-as
                             to-calcit-data $ js/JSON.parse text
-                            :: 'Map 'String 'Dynamic
+                            quote $ Map String Dynamic
                         , &unit
                     =< 8 nil
                     button $ {} (:style ui/button) (:inner-text |Reset)
@@ -78,12 +78,13 @@
                     let
                         clipboard $ .unwrap-or (:clipboard store) nil
                       if (non-nil? clipboard)
-                        <>
+                        Option :some $ <>
                           decode-map-as
                             .unwrap-or (get clipboard |type) |
                             , 'String
                           {} (:font-family ui/font-fancy)
                             :color $ hsl 0 0 70
+                        Option :none
                     =< 4 nil
                     button $ {} (:style ui/button) (:inner-text "|Paste Tree")
                       :on-click $ fn (e d!)
@@ -97,20 +98,22 @@
                           (:missing) nil
                           (:shape message) (raise message)
                 .render prompt-plugin
-                when dev? $ comp-typed-reel (>> states :reel) reel $ {}
+                if dev?
+                  Option :some $ comp-typed-reel (>> states :reel) reel $ {}
+                  Option :none
           :examples $ []
           :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store) (-> respo.schema/Component) (:features :js-ffi)
         'comp-json-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-json-block (data path focus)
             let
                 data $ if (nil? data) ({})
-                  decode-map-as data $ :: 'Map 'String 'Dynamic
+                  decode-map-as data $ quote $ Map String Dynamic
               match
                 .unwrap-or (get data |type) nil
                 |object $ let
                     required-fields $ decode-map-as
                       .unwrap-or (get data |required) ([])
-                      :: 'List 'String
+                      quote $ List String
                   div
                     {} $ :style $ .merge style-block
                       {} $ :flex-direction |column
@@ -128,7 +131,7 @@
                       let
                           properties $ decode-map-as
                             .unwrap-or (get data |properties) ({})
-                            :: 'Map 'String 'Dynamic
+                            quote $ Map String Dynamic
                         map
                           .to-list $ keys properties
                           fn (k)
@@ -141,7 +144,8 @@
                                     :color $ hsl 200 90 60
                                   if
                                     -> required-fields $ .includes? k
-                                    <> |* $ {} $ :color |red
+                                    Option :some $ <> |* $ {} (:color |red)
+                                    Option :none
                                   <> k
                                 =< 8 nil
                                 comp-json-block v
@@ -378,6 +382,10 @@
             |bottom-tip :default hud!
     'app.schema $ %{} 'FileEntry
       :defs $ {}
+        'CursorKey $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion CursorKey Tag String Number
+          :examples $ []
+          :schema $ quote UnionDef
         'DispatchOp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def DispatchOp (:: :unhandled)
           :examples $ []
@@ -385,8 +393,8 @@
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :states
-              quote $ List Dynamic
-              , 'Dynamic
+              quote $ List app.schema/CursorKey
+              , Dynamic
             :api-data $ quote $ Map String Dynamic
             :reset
             :wrap-object
@@ -395,10 +403,10 @@
             :copy
             :paste
             :focus $ quote $ List String
-            :paste-with 'Dynamic
-            :save-item 'String 'Dynamic
-            :remove-item 'String
-            :hydrate-storage 'app.schema/Store
+            :paste-with Dynamic
+            :save-item String Dynamic
+            :remove-item String
+            :hydrate-storage app.schema/Store
           :examples $ []
           :schema $ quote EnumDef
         'Store $ %{} 'CodeEntry
@@ -448,12 +456,12 @@
           :doc "|Validate the existing flat Map archive and construct the current Store. Persistence retains the legacy Map format."
           :code $ quote $ defn decode-store (raw)
             let
-                fields $ decode-map-as raw $ :: 'Map 'Tag 'Dynamic
+                fields $ decode-map-as raw $ quote (Map Tag Dynamic)
                 clipboard $ .unwrap-or (get fields :clipboard) nil
               Store :states
                 decode-map-as
                   .unwrap-or (get fields :states) ({})
-                  :: 'Map 'Dynamic 'Dynamic
+                  quote $ Map Dynamic Dynamic
                 , :api-data
                   optional-schema $ .unwrap-or (get fields :api-data) nil
                   , :version-0
@@ -461,13 +469,13 @@
                     , :focus
                       decode-map-as
                         .unwrap-or (get fields :focus) ([])
-                        :: 'List 'String
+                        quote $ List String
                       , :clipboard
                         if (nil? clipboard) (Option :none) (Option :some clipboard)
                         , :memory
                           decode-map-as
                             .unwrap-or (get fields :memory) ({})
-                            :: 'Map 'String 'Dynamic
+                            quote $ Map String Dynamic
                           , :extra $ dissoc
                             dissoc
                               dissoc
@@ -484,10 +492,10 @@
             match op
               (:states cursor data)
                 Op :states
-                  decode-map-as cursor $ :: 'List 'Dynamic
+                  decode-map-as cursor $ quote $ List app.schema/CursorKey
                   , data
               (:api-data data)
-                Op :api-data $ decode-map-as data $ :: 'Map 'String 'Dynamic
+                Op :api-data $ decode-map-as data $ quote (Map String Dynamic)
               (:reset) (Op :reset)
               (:wrap-object) (Op :wrap-object)
               (:wrap-array) (Op :wrap-array)
@@ -495,7 +503,7 @@
               (:copy) (Op :copy)
               (:paste) (Op :paste)
               (:focus data)
-                Op :focus $ decode-map-as data $ :: 'List 'String
+                Op :focus $ decode-map-as data $ quote (List String)
               (:paste-with data) (Op :paste-with data)
               (:save-item name tree)
                 Op :save-item (decode-map-as name 'String) tree
@@ -509,10 +517,23 @@
               _ $ raise |Unknown-operation
           :examples $ []
           :schema $ quote $ Fn Enum (-> app.schema/Op)
+          :tests $ [] $ %{} 'TestEntry (:name |checked-state-cursor)
+            :code $ quote $ let
+                cursor $ [] :dialog |name 0
+              assert= (Op :states cursor false)
+                normalize-op $ :: :states cursor false
+              assert |reject-bool-cursor $ try
+                do
+                  normalize-op $ :: :states ([] true) false
+                  , false
+                fn (message)
+                  hint-fn $ Fn String $ -> Bool
+                  includes? message |CursorKey
+            :tags $ #{} :unit
         'optional-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn optional-schema (raw)
             if (nil? raw) (Option :none)
-              Option :some $ decode-map-as raw $ :: 'Map 'String 'Dynamic
+              Option :some $ decode-map-as raw $ quote (Map String Dynamic)
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Option $ Map String Dynamic
@@ -567,7 +588,7 @@
                 api $ .unwrap-or (:api-data store) ({})
                 updated $ decode-map-as
                   assoc-in api (:focus store) value
-                  :: 'Map 'String 'Dynamic
+                  quote $ Map String Dynamic
               struct-with store $ :api-data $ Option :some updated
           :examples $ []
           :schema $ quote $ Fn app.schema/Store Dynamic (-> app.schema/Store)
@@ -577,7 +598,7 @@
               (:states cursor data)
                 struct-with store $ :states $ decode-map-as
                   update-state-tree (:states store) cursor data
-                  :: 'Map 'Dynamic 'Dynamic
+                  quote $ Map Dynamic Dynamic
               (:api-data data)
                 struct-with store
                   :api-data $ Option :some data
