@@ -448,6 +448,16 @@
                   restored $ decode-store archived
                 assert= (serialize-store checked) (serialize-store restored)
               :tags $ #{} :unit
+            %{} 'TestEntry (:name |rejects-boolean-state-key)
+              :code $ quote $ assert |reject-boolean-state-key
+                try
+                  do
+                    decode-store $ assoc (serialize-store store) :states $ {} (true false)
+                    , false
+                  fn (message)
+                    hint-fn $ Fn String $ -> Bool
+                    includes? message |CursorKey
+              :tags $ #{} :unit
         'decode-store $ %{} 'CodeEntry
           :doc "|Validate the existing flat Map archive and construct the current Store. Persistence retains the legacy Map format."
           :code $ quote $ defn decode-store (raw)
