@@ -4,15 +4,15 @@
 
 ## 对使用者的影响
 
-本项目使用 Calcit 和 `@calcit/procs` 0.34.1。升级后请重新安装依赖并编译前端。
+本项目使用 Calcit 和 `@calcit/procs` 0.35.1。升级后请重新安装依赖并编译前端。
 
-组件状态更新接受由 Tag、字符串和数字组成的混合路径。读取旧存档时仍保留原状态键、Swagger 扩展字段和命名片段。必填字段星号、内部剪贴板类型标签和开发面板按各自原有条件显示。
+组件状态更新接受由 Tag、字符串和数字组成的混合路径。旧存档的顶层 UI 状态键按同一个 Tag、String、Number union 校验，Swagger 扩展字段和命名片段继续保留。非法状态键沿用原坏存档保护。必填字段星号、内部剪贴板类型标签和开发面板按各自原有条件显示。
 
-Respo 0.18.0、UI 0.12.0、Reel 0.8.0、Alerts 0.11.2 和 JS FFI 0.2.9 均使用正式版本。
+Respo 0.19.4、UI 0.15.1、Reel 0.9.2、Alerts 0.13.1 和 JS FFI 0.2.13 均使用正式版本。
 
 ## 开发
 
-使用 Node.js 24、Yarn 4.18.0、Calcit 0.34.1，项目文件为 `calcit.cirru`、`deps.cirru`。
+使用 Node.js 24、Yarn 4.18.0、Calcit 0.35.1，项目文件为 `calcit.cirru`、`deps.cirru`。
 
 ```sh
 caps --strict --ci

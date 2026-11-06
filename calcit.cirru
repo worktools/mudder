@@ -29,7 +29,7 @@
                   div ({})
                     if (nil? api-data) (<> "|Load a Swagger schema to begin.")
                       comp-json-block api-data ([]) focus
-                  =< nil 200
+                  space-y 200
                 div
                   {} $ :style $ {} (:padding "|4px 8px")
                   div ({})
@@ -43,25 +43,25 @@
                           hint-fn $ Fn String $ -> Unit
                           d! $ schema/Op :api-data $ decode-map-as
                             to-calcit-data $ js/JSON.parse text
-                            quote $ Map String Dynamic
+                            Map String Dynamic
                         , &unit
-                    =< 8 nil
+                    space-x 8
                     button $ {} (:style ui/button) (:inner-text |Reset)
                       :on-click $ fn (e d!)
                         d! $ schema/Op :reset
-                    =< 24 nil
+                    space-x 24
                     button $ {} (:style ui/button) (:inner-text |Array)
                       :on-click $ fn (e d!)
                         d! $ schema/Op :wrap-array
-                    =< 8 nil
+                    space-x 8
                     button $ {} (:style ui/button) (:inner-text |Object)
                       :on-click $ fn (e d!)
                         d! $ schema/Op :wrap-object
-                    =< 8 nil
+                    space-x 8
                     button $ {} (:style ui/button) (:inner-text "|Set bool")
                       :on-click $ fn (e d!)
                         d! $ schema/Op :set-bool
-                  =< 0 nil
+                  space-x 0
                   div ({})
                     button $ {} (:style ui/button) (:inner-text "|Copy Text")
                       :on-click $ fn (e d!)
@@ -69,12 +69,12 @@
                             data $ to-js-data api-data
                           copy! $ js/JSON.stringify data nil 2
                           js/console.log |Copied data
-                  =< 0 nil
+                  space-x 0
                   div ({})
                     button $ {} (:style ui/button) (:inner-text "|Copy Tree")
                       :on-click $ fn (e d!)
                         d! $ schema/Op :copy
-                    =< 4 nil
+                    space-x 4
                     let
                         clipboard $ .unwrap-or (:clipboard store) nil
                       if (non-nil? clipboard)
@@ -85,11 +85,11 @@
                           {} (:font-family ui/font-fancy)
                             :color $ hsl 0 0 70
                         Option :none
-                    =< 4 nil
+                    space-x 4
                     button $ {} (:style ui/button) (:inner-text "|Paste Tree")
                       :on-click $ fn (e d!)
                         d! $ schema/Op :paste
-                  =< 0 nil
+                  space-x 0
                   comp-named (>> states :named) (:memory store)
                     match (get-in api-data focus)
                       (:ok value) value
@@ -107,13 +107,13 @@
           :code $ quote $ defn comp-json-block (data path focus)
             let
                 data $ if (nil? data) ({})
-                  decode-map-as data $ quote $ Map String Dynamic
+                  decode-map-as data $ Map String Dynamic
               match
                 .unwrap-or (get data |type) nil
                 |object $ let
                     required-fields $ decode-map-as
                       .unwrap-or (get data |required) ([])
-                      quote $ List String
+                      List String
                   div
                     {} $ :style $ .merge style-block
                       {} $ :flex-direction |column
@@ -131,7 +131,7 @@
                       let
                           properties $ decode-map-as
                             .unwrap-or (get data |properties) ({})
-                            quote $ Map String Dynamic
+                            Map String Dynamic
                         map
                           .to-list $ keys properties
                           fn (k)
@@ -147,7 +147,7 @@
                                     Option :some $ <> |* $ {} (:color |red)
                                     Option :none
                                   <> k
-                                =< 8 nil
+                                space-x 8
                                 comp-json-block v
                                   conj (conj path |properties) k
                                   , focus
@@ -162,7 +162,7 @@
                     :on-click $ fn (e d!)
                       d! $ schema/Op :focus path
                     :inner-text |Array
-                  =< 8 nil
+                  space-x 8
                   comp-json-block
                     .unwrap-or (get data |items) nil
                     conj path |items
@@ -232,7 +232,7 @@
                             :inner-text k
                             :on-click $ fn (e d!)
                               d! $ schema/Op :paste-with item
-                          =< 8 nil
+                          space-x 8
                           span $ {}
                             :style $ {} (:cursor |pointer) (:color |red)
                             :on-click $ fn (e d!)
@@ -259,7 +259,7 @@
           :require (respo-ui.core :as ui)
             respo-ui.core :refer $ hsl
             respo.core :refer $ defcomp list-> <> >> div button span
-            respo.comp.space :refer $ =<
+            respo.comp.space :refer $ space-x space-y
             reel.comp.reel :refer $ comp-typed-reel
             app.config :refer $ dev?
             respo-alerts.core :refer $ use-prompt
@@ -298,16 +298,14 @@
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op)
             when config/dev? $ println |Dispatch: op
-            if (enum? op)
-              match (typed/decode-control op)
-                (:some control)
-                  reset! *reel $ typed/apply-control updater @*reel control
-                (:none)
-                  reset! *reel $ typed/record-op updater @*reel (schema/normalize-op op) (generate-id!) (host/now-ms)
-              raise "|Expected an operation Enum"
+            match (typed/decode-control op)
+              (:some control)
+                reset! *reel $ typed/apply-control updater @*reel control
+              (:none)
+                reset! *reel $ typed/record-op updater @*reel (schema/normalize-op op) (generate-id!) (host/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> Unit)
+          :schema $ quote $ Fn AnyEnum (-> Unit)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -389,20 +387,18 @@
         'DispatchOp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def DispatchOp (:: :unhandled)
           :examples $ []
-          :schema $ quote Enum
+          :schema $ quote AnyEnum
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states
-              quote $ List app.schema/CursorKey
-              , Dynamic
-            :api-data $ quote $ Map String Dynamic
+            :states (List app.schema/CursorKey) Dynamic
+            :api-data $ Map String Dynamic
             :reset
             :wrap-object
             :wrap-array
             :set-bool
             :copy
             :paste
-            :focus $ quote $ List String
+            :focus $ List String
             :paste-with Dynamic
             :save-item String Dynamic
             :remove-item String
@@ -412,13 +408,13 @@
         'Store $ %{} 'CodeEntry
           :doc "|Root application state. Swagger values and heterogeneous Respo state remain honest open boundaries; extra preserves unknown legacy root fields."
           :code $ quote $ defstruct Store
-            :states $ quote $ Map Dynamic Dynamic
-            :api-data $ quote $ Option (Map String Dynamic)
-            :version-0 $ quote $ Option (Map String Dynamic)
-            :focus $ quote $ List String
-            :clipboard $ quote $ Option Dynamic
-            :memory $ quote $ Map String Dynamic
-            :extra $ quote $ Map Tag Dynamic
+            :states $ Map app.schema/CursorKey Dynamic
+            :api-data $ Option $ Map String Dynamic
+            :version-0 $ Option $ Map String Dynamic
+            :focus $ List String
+            :clipboard $ Option Dynamic
+            :memory $ Map String Dynamic
+            :extra $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
           :tests $ []
@@ -452,16 +448,26 @@
                   restored $ decode-store archived
                 assert= (serialize-store checked) (serialize-store restored)
               :tags $ #{} :unit
+            %{} 'TestEntry (:name |rejects-boolean-state-key)
+              :code $ quote $ assert |reject-boolean-state-key
+                try
+                  do
+                    decode-store $ assoc (serialize-store store) :states $ {} (true false)
+                    , false
+                  fn (message)
+                    hint-fn $ Fn String $ -> Bool
+                    includes? message |CursorKey
+              :tags $ #{} :unit
         'decode-store $ %{} 'CodeEntry
           :doc "|Validate the existing flat Map archive and construct the current Store. Persistence retains the legacy Map format."
           :code $ quote $ defn decode-store (raw)
             let
-                fields $ decode-map-as raw $ quote (Map Tag Dynamic)
+                fields $ decode-map-as raw $ Map Tag Dynamic
                 clipboard $ .unwrap-or (get fields :clipboard) nil
               Store :states
                 decode-map-as
                   .unwrap-or (get fields :states) ({})
-                  quote $ Map Dynamic Dynamic
+                  Map app.schema/CursorKey Dynamic
                 , :api-data
                   optional-schema $ .unwrap-or (get fields :api-data) nil
                   , :version-0
@@ -469,13 +475,13 @@
                     , :focus
                       decode-map-as
                         .unwrap-or (get fields :focus) ([])
-                        quote $ List String
+                        List String
                       , :clipboard
                         if (nil? clipboard) (Option :none) (Option :some clipboard)
                         , :memory
                           decode-map-as
                             .unwrap-or (get fields :memory) ({})
-                            quote $ Map String Dynamic
+                            Map String Dynamic
                           , :extra $ dissoc
                             dissoc
                               dissoc
@@ -492,10 +498,10 @@
             match op
               (:states cursor data)
                 Op :states
-                  decode-map-as cursor $ quote $ List app.schema/CursorKey
+                  decode-map-as cursor $ List app.schema/CursorKey
                   , data
               (:api-data data)
-                Op :api-data $ decode-map-as data $ quote (Map String Dynamic)
+                Op :api-data $ decode-map-as data $ Map String Dynamic
               (:reset) (Op :reset)
               (:wrap-object) (Op :wrap-object)
               (:wrap-array) (Op :wrap-array)
@@ -503,7 +509,7 @@
               (:copy) (Op :copy)
               (:paste) (Op :paste)
               (:focus data)
-                Op :focus $ decode-map-as data $ quote (List String)
+                Op :focus $ decode-map-as data $ List String
               (:paste-with data) (Op :paste-with data)
               (:save-item name tree)
                 Op :save-item (decode-map-as name 'String) tree
@@ -516,7 +522,7 @@
                   decode-store data
               _ $ raise |Unknown-operation
           :examples $ []
-          :schema $ quote $ Fn Enum (-> app.schema/Op)
+          :schema $ quote $ Fn AnyEnum (-> app.schema/Op)
           :tests $ [] $ %{} 'TestEntry (:name |checked-state-cursor)
             :code $ quote $ let
                 cursor $ [] :dialog |name 0
@@ -533,7 +539,7 @@
         'optional-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn optional-schema (raw)
             if (nil? raw) (Option :none)
-              Option :some $ decode-map-as raw $ quote (Map String Dynamic)
+              Option :some $ decode-map-as raw $ Map String Dynamic
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Option $ Map String Dynamic
@@ -588,7 +594,7 @@
                 api $ .unwrap-or (:api-data store) ({})
                 updated $ decode-map-as
                   assoc-in api (:focus store) value
-                  quote $ Map String Dynamic
+                  Map String Dynamic
               struct-with store $ :api-data $ Option :some updated
           :examples $ []
           :schema $ quote $ Fn app.schema/Store Dynamic (-> app.schema/Store)
@@ -598,7 +604,7 @@
               (:states cursor data)
                 struct-with store $ :states $ decode-map-as
                   update-state-tree (:states store) cursor data
-                  quote $ Map Dynamic Dynamic
+                  Map app.schema/CursorKey Dynamic
               (:api-data data)
                 struct-with store
                   :api-data $ Option :some data
