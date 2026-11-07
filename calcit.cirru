@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |alerts.calcit/
-      :type-slots $ {} $ :dispatch-op |app.schema/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'app.schema/DispatchOp
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
@@ -20,23 +20,25 @@
                     :input-style $ {} (:height |50vh) (:font-family ui/font-code)
                     :card-style $ {} $ :max-width |60vw
                 focus $ :focus store
-                api-data $ schema/optional-value $ :api-data store
+                api-data $ :api-data store
               div
                 {} $ :style $ .merge ui/global ui/fullscreen ui/row
                 div
                   {} $ :style $ .merge ui/expand ui/column
                     {} $ :padding "|20px 20px"
                   div ({})
-                    if (nil? api-data) (<> "|Load a Swagger schema to begin.")
-                      comp-json-block api-data ([]) focus
+                    match api-data
+                      (:some data)
+                        comp-json-block data ([]) focus
+                      (:none) (<> "|Load a Swagger schema to begin.")
                   space-y 200
                 div
                   {} $ :style $ {} (:padding "|4px 8px")
                   div ({})
                     button $ {} (:style ui/button) (:inner-text |Load)
                       :on-click $ fn (e d!)
-                        hint-fn $ Fn (Map Tag Dynamic)
-                          Fn Dynamic & Dynamic $ -> Unit
+                        hint-fn $ Fn respo.schema/RespoEvent
+                          Fn AnyEnum $ -> Unit
                           -> Unit
                         ; println $ :content state
                         .show prompt-plugin d! $ fn (text)
@@ -66,7 +68,9 @@
                     button $ {} (:style ui/button) (:inner-text "|Copy Text")
                       :on-click $ fn (e d!)
                         let
-                            data $ to-js-data api-data
+                            data $ match api-data
+                              (:some data) (to-js-data data)
+                              (:none) (to-js-data nil)
                           copy! $ js/JSON.stringify data nil 2
                           js/console.log |Copied data
                   space-x 0
@@ -75,28 +79,23 @@
                       :on-click $ fn (e d!)
                         d! $ schema/Op :copy
                     space-x 4
-                    let
-                        clipboard $ .unwrap-or (:clipboard store) nil
-                      if (non-nil? clipboard)
-                        Option :some $ <>
-                          decode-map-as
-                            .unwrap-or (get clipboard |type) |
-                            , 'String
-                          {} (:font-family ui/font-fancy)
-                            :color $ hsl 0 0 70
-                        Option :none
+                    match (:clipboard store)
+                      (:some clipboard)
+                        if (non-nil? clipboard)
+                          Option :some $ <>
+                            decode-map-as
+                              .unwrap-or (get clipboard |type) |
+                              , 'String
+                            {} (:font-family ui/font-fancy)
+                              :color $ hsl 0 0 70
+                          Option :none
+                      (:none) (Option :none)
                     space-x 4
                     button $ {} (:style ui/button) (:inner-text "|Paste Tree")
                       :on-click $ fn (e d!)
                         d! $ schema/Op :paste
                   space-x 0
-                  comp-named (>> states :named) (:memory store)
-                    match (get-in api-data focus)
-                      (:ok value) value
-                      (:err error)
-                        match error
-                          (:missing) nil
-                          (:shape message) (raise message)
+                  comp-named (>> states :named) (:memory store) (app.updater/focused-value store)
                 .render prompt-plugin
                 if dev?
                   Option :some $ comp-typed-reel (>> states :reel) reel $ {}
@@ -109,7 +108,7 @@
                 data $ if (nil? data) ({})
                   decode-map-as data $ Map String Dynamic
               match
-                .unwrap-or (get data |type) nil
+                .unwrap-or (get data |type) |
                 |object $ let
                     required-fields $ decode-map-as
                       .unwrap-or (get data |required) ([])
@@ -163,10 +162,11 @@
                       d! $ schema/Op :focus path
                     :inner-text |Array
                   space-x 8
-                  comp-json-block
-                    .unwrap-or (get data |items) nil
-                    conj path |items
-                    , focus
+                  match (get data |items)
+                    (:some item)
+                      comp-json-block item (conj path |items) focus
+                    (:none)
+                      comp-json-block nil (conj path |items) focus
                 |string $ comp-literal data path $ = path focus
                 |number $ comp-literal data path $ = path focus
                 |integer $ comp-literal data path $ = path focus
@@ -184,24 +184,25 @@
                   {} (:border-radius |8px)
                     :background-color $ hsl 0 0 97
                   {}
-              span $ {}
-                :style $ {} $ :font-family ui/font-fancy
-                :on-click $ fn (e d!)
-                  d! $ schema/Op :focus path
-                :inner-text $ .unwrap-or (get rule |type) nil
+              span $ schema/assoc-wire-field
+                {}
+                  :style $ {} $ :font-family ui/font-fancy
+                  :on-click $ fn (e d!)
+                    d! $ schema/Op :focus path
+                , :inner-text $ get rule |type
               match (get rule |mock)
                 (:some mock)
-                  span $ {}
-                    :style $ {} (:margin-left |8px) (:font-size |10px) (:font-family ui/font-code)
+                  Option :some $ span $ schema/assoc-wire-field
+                    {} $ :style $ {} (:margin-left |8px) (:font-size |10px) (:font-family ui/font-code)
                       :color $ hsl 200 40 70
-                    :inner-text $ .unwrap-or (get mock |mock) nil
-                (:none) nil
+                    , :inner-text (get mock |mock)
+                (:none) (Option :none)
               match (get rule |description)
                 (:some desc)
-                  <> (decode-map-as desc 'String)
+                  Option :some $ <> (decode-map-as desc 'String)
                     {} (:margin-left |8px) (:font-size |12px)
                       :color $ hsl 0 0 80
-                (:none) nil
+                (:none) (Option :none)
           :examples $ []
           :schema $ quote $ Fn (Map String Dynamic) (List String) Bool (-> respo.schema/Element)
         'comp-named $ %{} 'CodeEntry (:doc |)
@@ -213,12 +214,16 @@
                 div ({})
                   button $ {} (:style ui/button) (:inner-text |Save)
                     :on-click $ fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn AnyEnum $ -> Unit
                         -> Unit
                       .show name-plugin d! $ fn (text)
                         hint-fn $ Fn String $ -> Unit
-                        d! $ schema/Op :save-item text focus-data
+                        match focus-data
+                          (:some item)
+                            d! $ schema/Op :save-item text item
+                          (:none)
+                            d! $ schema/Op :save-item text nil
                       , &unit
                 list-> ({})
                   map
@@ -240,7 +245,7 @@
                             :inner-text "|✕"
                 .render name-plugin
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) (Map String Dynamic) Dynamic (-> respo.schema/Component)
+          :schema $ quote $ Fn (Map Dynamic Dynamic) (Map String Dynamic) (Option Dynamic) (-> respo.schema/Component)
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
@@ -458,26 +463,38 @@
                     hint-fn $ Fn String $ -> Bool
                     includes? message |CursorKey
               :tags $ #{} :unit
+        'assoc-wire-field $ %{} 'CodeEntry
+          :doc "|Write an optional value to the legacy wire Map, keeping an explicit nil for absent values."
+          :code $ quote $ defn assoc-wire-field (target key value)
+            match value
+              (:some item) (.assoc target key item)
+              (:none) (.assoc target key nil)
+          :examples $ []
+          :schema $ quote $ Fn (Map K Dynamic) K (Option T)
+            -> $ Map K Dynamic
+            :generics K T
         'decode-store $ %{} 'CodeEntry
           :doc "|Validate the existing flat Map archive and construct the current Store. Persistence retains the legacy Map format."
           :code $ quote $ defn decode-store (raw)
             let
                 fields $ decode-map-as raw $ Map Tag Dynamic
-                clipboard $ .unwrap-or (get fields :clipboard) nil
               Store :states
                 decode-map-as
                   .unwrap-or (get fields :states) ({})
                   Map app.schema/CursorKey Dynamic
                 , :api-data
-                  optional-schema $ .unwrap-or (get fields :api-data) nil
+                  optional-schema $ get fields :api-data
                   , :version-0
-                    optional-schema $ .unwrap-or (get fields :version-0) nil
+                    optional-schema $ get fields :version-0
                     , :focus
                       decode-map-as
                         .unwrap-or (get fields :focus) ([])
                         List String
                       , :clipboard
-                        if (nil? clipboard) (Option :none) (Option :some clipboard)
+                        match (get fields :clipboard)
+                          (:some value)
+                            if (nil? value) (Option :none) (Option :some value)
+                          (:none) (Option :none)
                         , :memory
                           decode-map-as
                             .unwrap-or (get fields :memory) ({})
@@ -538,26 +555,27 @@
             :tags $ #{} :unit
         'optional-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn optional-schema (raw)
-            if (nil? raw) (Option :none)
-              Option :some $ decode-map-as raw $ Map String Dynamic
+            match raw
+              (:some value)
+                if (nil? value) (Option :none)
+                  Option :some $ decode-map-as value $ Map String Dynamic
+              (:none) (Option :none)
           :examples $ []
-          :schema $ quote $ Fn Dynamic
+          :schema $ quote $ Fn (Option Dynamic)
             -> $ Option $ Map String Dynamic
-        'optional-value $ %{} 'CodeEntry
-          :doc "|Legacy storage serialization boundary: retain JSON/EDN nil for absent fields; business state uses Option."
-          :code $ quote $ defn optional-value (value) (.unwrap-or value nil)
-          :examples $ []
-          :schema $ quote $ Fn (Option Dynamic) (-> Dynamic)
         'serialize-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn serialize-store (value)
-            .merge (:extra value)
-              {}
-                :states $ :states value
-                :api-data $ optional-value $ :api-data value
-                :version-0 $ optional-value $ :version-0 value
-                :focus $ :focus value
-                :clipboard $ optional-value $ :clipboard value
-                :memory $ :memory value
+            app.schema/assoc-wire-field
+              app.schema/assoc-wire-field
+                app.schema/assoc-wire-field
+                  .merge (:extra value)
+                    {}
+                      :states $ :states value
+                      :focus $ :focus value
+                      :memory $ :memory value
+                  , :api-data $ :api-data value
+                , :version-0 $ :version-0 value
+              , :clipboard $ :clipboard value
           :examples $ []
           :schema $ quote $ Fn app.schema/Store
             -> $ Map Tag Dynamic
@@ -615,11 +633,11 @@
                 struct-with store $ :focus path
               (:wrap-object)
                 put-focus store $ {} (|type |object)
-                  |properties $ {} $ |data
-                    .unwrap-or (focused-value store) nil
+                  |properties $ app.schema/assoc-wire-field ({}) |data $ focused-value store
               (:wrap-array)
-                put-focus store $ {} (|type |array)
-                  |items $ .unwrap-or (focused-value store) nil
+                put-focus store $ app.schema/assoc-wire-field
+                  {} $ |type |array
+                  , |items $ focused-value store
               (:set-bool)
                 put-focus store $ {} $ |type |boolean
               (:copy)
