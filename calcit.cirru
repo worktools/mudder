@@ -104,78 +104,79 @@
           :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store) (-> respo.schema/Component) (:features :js-ffi)
         'comp-json-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-json-block (data path focus)
-            let
-                data $ if (nil? data) ({})
-                  decode-map-as data $ Map String Dynamic
-              match
-                .unwrap-or (get data |type) |
-                |object $ let
-                    required-fields $ decode-map-as
-                      .unwrap-or (get data |required) ([])
-                      List String
-                  div
-                    {} $ :style $ .merge style-block
-                      {} $ :flex-direction |column
-                      if (= path focus)
-                        {} (:border-radius |8px)
-                          :background-color $ hsl 0 0 97
-                        {}
-                    span $ {}
-                      :style $ {} (:cursor |pointer) (:font-family ui/font-fancy)
-                      :inner-text |Object
-                      :on-click $ fn (e d!)
-                        d! $ schema/Op :focus path
-                    list->
-                      {} $ :style $ {} (:margin-left |8px)
-                      let
-                          properties $ decode-map-as
-                            .unwrap-or (get data |properties) ({})
-                            Map String Dynamic
-                        map
-                          .to-list $ keys properties
-                          fn (k)
-                            let
-                                v $ .unwrap $ get properties k
-                              [] k $ div
-                                {} $ :style ui/row
-                                div
-                                  {} $ :style $ {} (:font-family ui/font-code)
-                                    :color $ hsl 200 90 60
-                                  if
-                                    -> required-fields $ .includes? k
-                                    Option :some $ <> |* $ {} (:color |red)
-                                    Option :none
-                                  <> k
-                                space-x 8
-                                comp-json-block v
-                                  conj (conj path |properties) k
-                                  , focus
-                |array $ div
-                  {} $ :style $ .merge ui/row style-block
+            match
+              .unwrap-or (get data |type) |
+              |object $ let
+                  required-fields $ decode-map-as
+                    .unwrap-or (get data |required) ([])
+                    List String
+                div
+                  {} $ :style $ .merge style-block
+                    {} $ :flex-direction |column
                     if (= path focus)
                       {} (:border-radius |8px)
                         :background-color $ hsl 0 0 97
                       {}
                   span $ {}
                     :style $ {} (:cursor |pointer) (:font-family ui/font-fancy)
+                    :inner-text |Object
                     :on-click $ fn (e d!)
                       d! $ schema/Op :focus path
-                    :inner-text |Array
-                  space-x 8
-                  match (get data |items)
-                    (:some item)
-                      comp-json-block item (conj path |items) focus
-                    (:none)
-                      comp-json-block nil (conj path |items) focus
-                |string $ comp-literal data path $ = path focus
-                |number $ comp-literal data path $ = path focus
-                |integer $ comp-literal data path $ = path focus
-                |boolean $ comp-literal data path $ = path focus
-                _ $ div ({})
-                  do (js/console.warn "|Unkown data" data)
-                    <> $ str "|Unknown data: data"
+                  list->
+                    {} $ :style $ {} (:margin-left |8px)
+                    let
+                        properties $ decode-map-as
+                          .unwrap-or (get data |properties) ({})
+                          Map String Dynamic
+                      map
+                        .to-list $ keys properties
+                        fn (k)
+                          let
+                              v $ .unwrap $ get properties k
+                            [] k $ div
+                              {} $ :style ui/row
+                              div
+                                {} $ :style $ {} (:font-family ui/font-code)
+                                  :color $ hsl 200 90 60
+                                if
+                                  -> required-fields $ .includes? k
+                                  Option :some $ <> |* $ {} (:color |red)
+                                  Option :none
+                                <> k
+                              space-x 8
+                              comp-json-block
+                                .unwrap-or
+                                  schema/optional-schema $ Option :some v
+                                  {}
+                                conj (conj path |properties) k
+                                , focus
+              |array $ div
+                {} $ :style $ .merge ui/row style-block
+                  if (= path focus)
+                    {} (:border-radius |8px)
+                      :background-color $ hsl 0 0 97
+                    {}
+                span $ {}
+                  :style $ {} (:cursor |pointer) (:font-family ui/font-fancy)
+                  :on-click $ fn (e d!)
+                    d! $ schema/Op :focus path
+                  :inner-text |Array
+                space-x 8
+                comp-json-block
+                  .unwrap-or
+                    schema/optional-schema $ get data |items
+                    {}
+                  conj path |items
+                  , focus
+              |string $ comp-literal data path $ = path focus
+              |number $ comp-literal data path $ = path focus
+              |integer $ comp-literal data path $ = path focus
+              |boolean $ comp-literal data path $ = path focus
+              _ $ div ({})
+                do (js/console.warn "|Unkown data" data)
+                  <> $ str "|Unknown data: data"
           :examples $ []
-          :schema $ quote $ Fn Dynamic (List String) (List String) (-> respo.schema/Element) (:features :js-ffi)
+          :schema $ quote $ Fn (Map String Dynamic) (List String) (List String) (-> respo.schema/Element) (:features :js-ffi)
         'comp-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-literal (rule path focused?)
             div
@@ -300,17 +301,17 @@
           :code $ quote $ defref *storage-ready? false
           :examples $ []
           :schema $ quote $ Ref Bool
-        'dispatch! $ %{} 'CodeEntry (:doc |)
+        'dispatch! $ %{} 'CodeEntry
+          :doc "|Validate raw Respo, Alerts and Reel events before applying typed controls or recording application actions."
           :code $ quote $ defn dispatch! (op)
             when config/dev? $ println |Dispatch: op
-            match (typed/decode-control op)
-              (:some control)
-                reset! *reel $ typed/apply-control updater @*reel control
-              (:none)
-                reset! *reel $ typed/record-op updater @*reel (schema/normalize-op op) (generate-id!) (host/now-ms)
+            reset! *reel $ match (resolve-op op)
+              (reel.typed/Control control) (typed/apply-control updater @*reel control)
+              (app.schema/Op action)
+                typed/record-op updater @*reel action (generate-id!) (host/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> Unit)
+          :schema $ quote $ Fn AnyEnum (-> Unit) (:open :decode)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -368,6 +369,13 @@
               , dispatch!
           :examples $ []
           :schema $ quote $ Fn (-> Unit)
+        'resolve-op $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn resolve-op (op)
+            match (typed/decode-control op)
+              (:some control) control
+              (:none) (schema/normalize-op op)
+          :examples $ []
+          :schema $ quote $ Fn AnyEnum (-> app.schema/ResolvedOp) (:open :decode)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
@@ -389,7 +397,8 @@
           :code $ quote $ defunion CursorKey Tag String Number
           :examples $ []
           :schema $ quote UnionDef
-        'DispatchOp $ %{} 'CodeEntry (:doc |)
+        'DispatchOp $ %{} 'CodeEntry
+          :doc "|Compatibility slot for anonymous Alerts and Respo state events."
           :code $ quote $ def DispatchOp (:: :unhandled)
           :examples $ []
           :schema $ quote AnyEnum
@@ -410,6 +419,10 @@
             :hydrate-storage app.schema/Store
           :examples $ []
           :schema $ quote EnumDef
+        'ResolvedOp $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion ResolvedOp Op reel.typed/Control
+          :examples $ []
+          :schema $ quote UnionDef
         'Store $ %{} 'CodeEntry
           :doc "|Root application state. Swagger values and heterogeneous Respo state remain honest open boundaries; extra preserves unknown legacy root fields."
           :code $ quote $ defstruct Store
@@ -539,7 +552,7 @@
                   decode-store data
               _ $ raise |Unknown-operation
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> app.schema/Op)
+          :schema $ quote $ Fn AnyEnum (-> app.schema/Op) (:open :decode)
           :tests $ [] $ %{} 'TestEntry (:name |checked-state-cursor)
             :code $ quote $ let
                 cursor $ [] :dialog |name 0
