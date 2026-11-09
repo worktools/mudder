@@ -11,7 +11,7 @@
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defcomp comp-container (reel)
+          :code $ quote $ defcomp comp-container (reel on-control on-op)
             let
                 store $ :store reel
                 states $ :states store
@@ -38,12 +38,12 @@
                     button $ {} (:style ui/button) (:inner-text |Load)
                       :on-click $ fn (e d!)
                         hint-fn $ Fn respo.schema/RespoEvent
-                          Fn AnyEnum $ -> Unit
+                          Fn *dispatch-op $ -> Unit
                           -> Unit
                         ; println $ :content state
                         .show prompt-plugin d! $ fn (text)
                           hint-fn $ Fn String $ -> Unit
-                          d! $ schema/Op :api-data $ decode-map-as
+                          on-op $ schema/Op :api-data $ decode-map-as
                             to-calcit-data $ js/JSON.parse text
                             Map String Dynamic
                         , &unit
@@ -95,13 +95,17 @@
                       :on-click $ fn (e d!)
                         d! $ schema/Op :paste
                   space-x 0
-                  comp-named (>> states :named) (:memory store) (app.updater/focused-value store)
+                  comp-named (>> states :named) (:memory store) (app.updater/focused-value store) on-op
                 .render prompt-plugin
                 if dev?
-                  Option :some $ comp-typed-reel (>> states :reel) reel $ {}
+                  Option :some $ comp-typed-reel (>> states :reel) reel ({}) on-control
                   Option :none
           :examples $ []
-          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store) (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store)
+            Fn reel.typed/Control $ -> Unit
+            Fn app.schema/Op $ -> Unit
+            -> respo.schema/Component
+            :features :js-ffi
         'comp-json-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-json-block (data path focus)
             match
@@ -207,7 +211,7 @@
           :examples $ []
           :schema $ quote $ Fn (Map String Dynamic) (List String) Bool (-> respo.schema/Element)
         'comp-named $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defcomp comp-named (states memory focus-data)
+          :code $ quote $ defcomp comp-named (states memory focus-data on-op)
             let
                 name-plugin $ use-prompt (>> states :name)
                   {} $ :text "|Name this item"
@@ -216,15 +220,15 @@
                   button $ {} (:style ui/button) (:inner-text |Save)
                     :on-click $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn AnyEnum $ -> Unit
+                        Fn *dispatch-op $ -> Unit
                         -> Unit
                       .show name-plugin d! $ fn (text)
                         hint-fn $ Fn String $ -> Unit
                         match focus-data
                           (:some item)
-                            d! $ schema/Op :save-item text item
+                            on-op $ schema/Op :save-item text item
                           (:none)
-                            d! $ schema/Op :save-item text nil
+                            on-op $ schema/Op :save-item text nil
                       , &unit
                 list-> ({})
                   map
@@ -246,7 +250,9 @@
                             :inner-text "|✕"
                 .render name-plugin
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) (Map String Dynamic) (Option Dynamic) (-> respo.schema/Component)
+          :schema $ quote $ Fn (Map Dynamic Dynamic) (Map String Dynamic) (Option Dynamic)
+            Fn app.schema/Op $ -> Unit
+            -> respo.schema/Component
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
@@ -302,23 +308,23 @@
           :examples $ []
           :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry
-          :doc "|Validate raw Respo, Alerts and Reel events before applying typed controls or recording application actions."
+          :doc "|Records a named application Op or applies a named Reel Control."
           :code $ quote $ defn dispatch! (op)
             when config/dev? $ println |Dispatch: op
-            reset! *reel $ match (resolve-op op)
+            reset! *reel $ match op
               (reel.typed/Control control) (typed/apply-control updater @*reel control)
               (app.schema/Op action)
                 typed/record-op updater @*reel action (generate-id!) (host/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> Unit) (:open :decode)
+          :schema $ quote $ Fn app.schema/ResolvedOp (-> Unit)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
             when config/dev? $ load-console-formatter!
             render-app!
             add-watch! *reel :changes $ fn (reel prev) (render-app!)
-            when config/dev? $ listen-devtools! |k dispatch!
+            when config/dev? $ listen-devtools! |k on-control!
             browser/add-event-listener! |beforeunload $ fn (event) (persist-storage!)
             browser/set-interval! persist-storage! 60000
             try
@@ -340,6 +346,10 @@
             .unwrap $ dom/query-selector |.app
           :examples $ []
           :schema $ quote respo.dom/DomElement
+        'on-control! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-control! (control) (dispatch! control)
+          :examples $ []
+          :schema $ quote $ Fn reel.typed/Control (-> Unit)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ try
@@ -365,17 +375,14 @@
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! mount-target
-              fn () $ comp-container @*reel
-              , dispatch!
+              fn () $ comp-container @*reel on-control! $ fn (op)
+                hint-fn $ Fn app.schema/Op $ -> Unit
+                dispatch! op
+              fn (raw)
+                hint-fn $ Fn *dispatch-op $ -> Unit
+                dispatch! $ schema/normalize-op raw
           :examples $ []
           :schema $ quote $ Fn (-> Unit)
-        'resolve-op $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn resolve-op (op)
-            match (typed/decode-control op)
-              (:some control) control
-              (:none) (schema/normalize-op op)
-          :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> app.schema/ResolvedOp) (:open :decode)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
