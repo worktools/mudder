@@ -556,6 +556,15 @@
                 fn (message)
                   hint-fn $ Fn String $ -> Bool
                   includes? message |CursorKey
+              assert= (Op :reset)
+                normalize-op $ Op :reset
+              assert |reject-anonymous-reset $ try
+                do
+                  normalize-op $ :: :reset
+                  , false
+                fn (message)
+                  hint-fn $ Fn String $ -> Bool
+                  = message |Unknown-operation
             :tags $ #{} :unit
         'optional-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn optional-schema (raw)
