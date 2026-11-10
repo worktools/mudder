@@ -530,34 +530,18 @@
                             , :memory
           :examples $ []
           :schema $ quote $ Fn Dynamic (-> app.schema/Store)
-        'normalize-op $ %{} 'CodeEntry (:doc |)
+        'normalize-op $ %{} 'CodeEntry
+          :doc "|Accept application Op values and adapt legacy widget state events."
           :code $ quote $ defn normalize-op (op)
-            match op
-              (:states cursor data)
-                Op :states
-                  decode-map-as cursor $ List app.schema/CursorKey
-                  , data
-              (:api-data data)
-                Op :api-data $ decode-map-as data $ Map String Dynamic
-              (:reset) (Op :reset)
-              (:wrap-object) (Op :wrap-object)
-              (:wrap-array) (Op :wrap-array)
-              (:set-bool) (Op :set-bool)
-              (:copy) (Op :copy)
-              (:paste) (Op :paste)
-              (:focus data)
-                Op :focus $ decode-map-as data $ List String
-              (:paste-with data) (Op :paste-with data)
-              (:save-item name tree)
-                Op :save-item (decode-map-as name 'String) tree
-              (:remove-item data)
-                Op :remove-item $ decode-map-as data 'String
-              (:hydrate-storage data)
-                Op :hydrate-storage $ if (struct? data)
-                  struct-match data (Store stored stored)
-                    _ _ $ raise "|Expected Store"
-                  decode-store data
-              _ $ raise |Unknown-operation
+            if
+              = (enum-definition op) (Option :some Op)
+              decode-map-as op 'app.schema/Op
+              match op
+                (:states cursor data)
+                  Op :states
+                    decode-map-as cursor $ List app.schema/CursorKey
+                    , data
+                _ $ raise |Unknown-operation
           :examples $ []
           :schema $ quote $ Fn AnyEnum (-> app.schema/Op) (:open :decode)
           :tests $ [] $ %{} 'TestEntry (:name |checked-state-cursor)
@@ -572,6 +556,15 @@
                 fn (message)
                   hint-fn $ Fn String $ -> Bool
                   includes? message |CursorKey
+              assert= (Op :reset)
+                normalize-op $ Op :reset
+              assert |reject-anonymous-reset $ try
+                do
+                  normalize-op $ :: :reset
+                  , false
+                fn (message)
+                  hint-fn $ Fn String $ -> Bool
+                  = message |Unknown-operation
             :tags $ #{} :unit
         'optional-schema $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn optional-schema (raw)
