@@ -209,7 +209,7 @@
                       :color $ hsl 0 0 80
                 (:none) None
           :examples $ []
-          :schema $ quote $ Fn (Map String Dynamic) (List String) Bool (-> respo.schema/Element)
+          :schema $ quote $ Fn (Map String V) (List String) Bool (-> respo.schema/Element) (:generics V)
         'comp-named $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-named (states memory focus-data on-op)
             let
@@ -524,7 +524,7 @@
                               , :clipboard
                             , :memory
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> Store)
+          :schema $ quote $ Fn V (-> Store) (:generics V)
         'normalize-op $ %{} 'CodeEntry
           :doc "|Accept application Op values and adapt legacy widget state events."
           :code $ quote $ defn normalize-op (op)
@@ -568,8 +568,9 @@
                 if (nil? value) None $ Some $ decode-map-as value (Map String Dynamic)
               (:none) None
           :examples $ []
-          :schema $ quote $ Fn (Option Dynamic)
+          :schema $ quote $ Fn (Option V)
             -> $ Option $ Map String Dynamic
+            :generics V
         'serialize-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn serialize-store (value)
             app.schema/assoc-wire-field
@@ -622,7 +623,7 @@
                   Map String Dynamic
               struct-with store $ :api-data $ Some updated
           :examples $ []
-          :schema $ quote $ Fn app.schema/Store Dynamic (-> app.schema/Store)
+          :schema $ quote $ Fn app.schema/Store V (-> app.schema/Store) (:generics V)
         'updater $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater (store op op-id op-time)
             match op
