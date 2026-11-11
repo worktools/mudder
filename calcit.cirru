@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |alerts.calcit/
-      :type-slots $ {} $ :dispatch-op 'app.schema/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'app.schema/Op
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
@@ -82,14 +82,14 @@
                     match (:clipboard store)
                       (:some clipboard)
                         if (non-nil? clipboard)
-                          Option :some $ <>
+                          Some $ <>
                             decode-map-as
                               .unwrap-or (get clipboard |type) |
                               , 'String
                             {} (:font-family ui/font-fancy)
                               :color $ hsl 0 0 70
-                          Option :none
-                      (:none) (Option :none)
+                          , None
+                      (:none) None
                     space-x 4
                     button $ {} (:style ui/button) (:inner-text "|Paste Tree")
                       :on-click $ fn (e d!)
@@ -98,12 +98,12 @@
                   comp-named (>> states :named) (:memory store) (app.updater/focused-value store) on-op
                 .render prompt-plugin
                 if dev?
-                  Option :some $ comp-typed-reel (>> states :reel) reel ({}) on-control
-                  Option :none
+                  Some $ comp-typed-reel (>> states :reel) reel ({}) on-control
+                  , None
           :examples $ []
-          :schema $ quote $ Fn (reel.typed/State app.schema/Op app.schema/Store)
+          :schema $ quote $ Fn (reel.typed/State schema/Op schema/Store)
             Fn reel.typed/Control $ -> Unit
-            Fn app.schema/Op $ -> Unit
+            Fn schema/Op $ -> Unit
             -> respo.schema/Component
             :features :js-ffi
         'comp-json-block $ %{} 'CodeEntry (:doc |)
@@ -144,13 +144,13 @@
                                   :color $ hsl 200 90 60
                                 if
                                   -> required-fields $ .includes? k
-                                  Option :some $ <> |* $ {} (:color |red)
-                                  Option :none
+                                  Some $ <> |* $ {} (:color |red)
+                                  , None
                                 <> k
                               space-x 8
                               comp-json-block
                                 .unwrap-or
-                                  schema/optional-schema $ Option :some v
+                                  schema/optional-schema $ Some v
                                   {}
                                 conj (conj path |properties) k
                                 , focus
@@ -197,17 +197,17 @@
                 , :inner-text $ get rule |type
               match (get rule |mock)
                 (:some mock)
-                  Option :some $ span $ schema/assoc-wire-field
+                  Some $ span $ schema/assoc-wire-field
                     {} $ :style $ {} (:margin-left |8px) (:font-size |10px) (:font-family ui/font-code)
                       :color $ hsl 200 40 70
                     , :inner-text (get mock |mock)
-                (:none) (Option :none)
+                (:none) None
               match (get rule |description)
                 (:some desc)
-                  Option :some $ <> (decode-map-as desc 'String)
+                  Some $ <> (decode-map-as desc 'String)
                     {} (:margin-left |8px) (:font-size |12px)
                       :color $ hsl 0 0 80
-                (:none) (Option :none)
+                (:none) None
           :examples $ []
           :schema $ quote $ Fn (Map String Dynamic) (List String) Bool (-> respo.schema/Element)
         'comp-named $ %{} 'CodeEntry (:doc |)
@@ -251,7 +251,7 @@
                 .render name-plugin
           :examples $ []
           :schema $ quote $ Fn (Map Dynamic Dynamic) (Map String Dynamic) (Option Dynamic)
-            Fn app.schema/Op $ -> Unit
+            Fn schema/Op $ -> Unit
             -> respo.schema/Component
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
@@ -297,12 +297,12 @@
           :code $ quote $ defref *reel
             %{} typed/State (:base schema/store) (:store schema/store)
               :records $ []
-              :pointer $ Option :none
+              :pointer None
               :stopped? false
               :display? false
               :merged? false
           :examples $ []
-          :schema $ quote $ Ref (reel.typed/State app.schema/Op app.schema/Store)
+          :schema $ quote $ Ref (typed/State schema/Op schema/Store)
         '*storage-ready? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *storage-ready? false
           :examples $ []
@@ -317,7 +317,7 @@
                 typed/record-op updater @*reel action (generate-id!) (host/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn app.schema/ResolvedOp (-> Unit)
+          :schema $ quote $ Fn schema/ResolvedOp (-> Unit)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -349,7 +349,7 @@
         'on-control! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-control! (control) (dispatch! control)
           :examples $ []
-          :schema $ quote $ Fn reel.typed/Control (-> Unit)
+          :schema $ quote $ Fn typed/Control (-> Unit)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ try
@@ -404,11 +404,6 @@
           :code $ quote $ defunion CursorKey Tag String Number
           :examples $ []
           :schema $ quote UnionDef
-        'DispatchOp $ %{} 'CodeEntry
-          :doc "|Compatibility slot for anonymous Alerts and Respo state events."
-          :code $ quote $ def DispatchOp (:: :unhandled)
-          :examples $ []
-          :schema $ quote AnyEnum
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :states (List app.schema/CursorKey) Dynamic
@@ -450,8 +445,8 @@
                     , :memory $ {} (|empty nil) (|boolean false)
                   checked $ decode-store raw
                 assert= raw $ serialize-store checked
-                assert= (Option :none) (:api-data checked)
-                assert= (Option :some false)
+                assert= None $ :api-data checked
+                assert= (Some false)
                   get (:memory checked) |boolean
               :tags $ #{} :unit
             %{} 'TestEntry (:name |rejects-malformed-focus)
@@ -513,8 +508,8 @@
                       , :clipboard
                         match (get fields :clipboard)
                           (:some value)
-                            if (nil? value) (Option :none) (Option :some value)
-                          (:none) (Option :none)
+                            if (nil? value) None $ Some value
+                          (:none) None
                         , :memory
                           decode-map-as
                             .unwrap-or (get fields :memory) ({})
@@ -529,12 +524,12 @@
                               , :clipboard
                             , :memory
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.schema/Store)
+          :schema $ quote $ Fn Dynamic (-> Store)
         'normalize-op $ %{} 'CodeEntry
           :doc "|Accept application Op values and adapt legacy widget state events."
           :code $ quote $ defn normalize-op (op)
             if
-              = (enum-definition op) (Option :some Op)
+              = (enum-definition op) (Some Op)
               decode-map-as op 'app.schema/Op
               match op
                 (:states cursor data)
@@ -543,7 +538,7 @@
                     , data
                 _ $ raise |Unknown-operation
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> app.schema/Op) (:open :decode)
+          :schema $ quote $ Fn AnyEnum (-> Op) (:open :decode)
           :tests $ [] $ %{} 'TestEntry (:name |checked-state-cursor)
             :code $ quote $ let
                 cursor $ [] :dialog |name 0
@@ -570,9 +565,8 @@
           :code $ quote $ defn optional-schema (raw)
             match raw
               (:some value)
-                if (nil? value) (Option :none)
-                  Option :some $ decode-map-as value $ Map String Dynamic
-              (:none) (Option :none)
+                if (nil? value) None $ Some $ decode-map-as value (Map String Dynamic)
+              (:none) None
           :examples $ []
           :schema $ quote $ Fn (Option Dynamic)
             -> $ Option $ Map String Dynamic
@@ -590,15 +584,15 @@
                 , :version-0 $ :version-0 value
               , :clipboard $ :clipboard value
           :examples $ []
-          :schema $ quote $ Fn app.schema/Store
+          :schema $ quote $ Fn Store
             -> $ Map Tag Dynamic
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
             Store :states
               {} $ :cursor $ []
-              , :api-data (Option :none) :version-0 (Option :none) :focus ([]) :clipboard (Option :none) :memory ({}) :extra $ {}
+              , :api-data None :version-0 None :focus ([]) :clipboard None :memory ({}) :extra $ {}
           :examples $ []
-          :schema $ quote app.schema/Store
+          :schema $ quote Store
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -610,12 +604,12 @@
                 match
                   get-in api $ :focus store
                   (:ok value)
-                    if (nil? value) (Option :none) (Option :some value)
+                    if (nil? value) None $ Some value
                   (:err error)
                     match error
-                      (:missing) (Option :none)
+                      (:missing) None
                       (:shape message) (raise message)
-              (:none) (Option :none)
+              (:none) None
           :examples $ []
           :schema $ quote $ Fn app.schema/Store
             -> $ Option Dynamic
@@ -626,7 +620,7 @@
                 updated $ decode-map-as
                   assoc-in api (:focus store) value
                   Map String Dynamic
-              struct-with store $ :api-data $ Option :some updated
+              struct-with store $ :api-data $ Some updated
           :examples $ []
           :schema $ quote $ Fn app.schema/Store Dynamic (-> app.schema/Store)
         'updater $ %{} 'CodeEntry (:doc |)
@@ -638,8 +632,8 @@
                   Map app.schema/CursorKey Dynamic
               (:api-data data)
                 struct-with store
-                  :api-data $ Option :some data
-                  :version-0 $ Option :some data
+                  :api-data $ Some data
+                  :version-0 $ Some data
               (:reset)
                 struct-with store $ :api-data $ :version-0 store
               (:focus path)
@@ -697,11 +691,10 @@
                     .unwrap $ :api-data wrapped
                     [] |properties |flag |items |x-extension
                 assert= (:api-data wrapped) (:api-data pasted)
-                assert= (Option :some source) (:api-data reset)
-                assert= (Option :some nil)
+                assert= (Some source) (:api-data reset)
+                assert= (Some nil)
                   get (:memory saved) |nullable
-                assert= (Option :none)
-                  get (:memory removed) |nullable
+                assert= None $ get (:memory removed) |nullable
                 assert= initial $ updater initial (app.schema/Op :paste) |empty 10
               :tags $ #{} :unit
             %{} 'TestEntry (:name |state-update-does-not-nest-store)
@@ -725,7 +718,7 @@
                     app.schema/Op :focus $ [] |nullable
                     , |focus 2
                   copied $ updater focused (app.schema/Op :copy) |copy 3
-                assert= (Option :none) (:clipboard copied)
+                assert= None $ :clipboard copied
                 assert= copied $ updater copied (app.schema/Op :paste) |paste 4
               :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
