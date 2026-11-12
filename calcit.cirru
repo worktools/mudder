@@ -376,7 +376,7 @@
           :code $ quote $ defn render-app! ()
             render-with! mount-target
               fn () $ comp-container @*reel on-control! $ fn (op)
-                hint-fn $ Fn app.schema/Op $ -> Unit
+                hint-fn $ Fn schema/Op $ -> Unit
                 dispatch! op
               fn (raw)
                 hint-fn $ Fn *dispatch-op $ -> Unit
@@ -406,7 +406,7 @@
           :schema $ quote UnionDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states (List app.schema/CursorKey) Dynamic
+            :states (List app.schema/CursorKey) WidgetState
             :api-data $ Map String Dynamic
             :reset
             :wrap-object
@@ -478,6 +478,14 @@
                     hint-fn $ Fn String $ -> Bool
                     includes? message |CursorKey
               :tags $ #{} :unit
+        'WidgetField $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion WidgetField Bool String
+          :examples $ []
+          :schema $ quote UnionDef
+        'WidgetState $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion WidgetState Bool (Map CursorKey WidgetField)
+          :examples $ []
+          :schema $ quote UnionDef
         'assoc-wire-field $ %{} 'CodeEntry
           :doc "|Write an optional value to the legacy wire Map, keeping an explicit nil for absent values."
           :code $ quote $ defn assoc-wire-field (target key value)
@@ -535,7 +543,7 @@
                 (:states cursor data)
                   Op :states
                     decode-map-as cursor $ List app.schema/CursorKey
-                    , data
+                    decode-map-as data WidgetState
                 _ $ raise |Unknown-operation
           :examples $ []
           :schema $ quote $ Fn AnyEnum (-> Op) (:open :decode)
