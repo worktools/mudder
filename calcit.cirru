@@ -126,7 +126,7 @@
                     :inner-text |Object
                     :on-click $ fn (e d!)
                       d! $ schema/Op :focus path
-                  list->
+                  keyed->
                     {} $ :style $ {} (:margin-left |8px)
                     let
                         properties $ decode-map-as
@@ -137,7 +137,7 @@
                         fn (k)
                           let
                               v $ .unwrap $ get properties k
-                            [] k $ div
+                            keyed-element k $ div
                               {} $ :style ui/row
                               div
                                 {} $ :style $ {} (:font-family ui/font-code)
@@ -230,13 +230,13 @@
                           (:none)
                             on-op $ schema/Op :save-item text nil
                       , &unit
-                list-> ({})
+                keyed-> ({})
                   map
                     .to-list $ keys memory
                     fn (k)
                       let
                           item $ .unwrap $ get memory k
-                        [] k $ div ({})
+                        keyed-element k $ div ({})
                           span $ {}
                             :style $ {} (:cursor |pointer) (:color |blue)
                             :inner-text k
@@ -270,7 +270,7 @@
         :code $ quote $ ns app.comp.container
           :require (respo-ui.core :as ui)
             respo-ui.core :refer $ hsl
-            respo.core :refer $ defcomp list-> <> >> div button span
+            respo.core :refer $ defcomp keyed-> keyed-element <> >> div button span
             respo.comp.space :refer $ space-x space-y
             reel.comp.reel :refer $ comp-typed-reel
             app.config :refer $ dev?
@@ -317,7 +317,7 @@
                 typed/record-op updater @*reel action (generate-id!) (host/now-ms)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn schema/ResolvedOp (-> Unit)
+          :schema $ quote $ Fn schema/ResolvedOp (-> Unit) (:features :io :state)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -340,7 +340,7 @@
             println "|App started."
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
             .unwrap $ dom/query-selector |.app
@@ -349,7 +349,7 @@
         'on-control! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-control! (control) (dispatch! control)
           :examples $ []
-          :schema $ quote $ Fn typed/Control (-> Unit)
+          :schema $ quote $ Fn typed/Control (-> Unit) (:features :io :state)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ try
@@ -360,7 +360,7 @@
                 hud! |error $ str "|Could not save locally: " message
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! ()
             if (js-nullish? build-errors)
@@ -371,7 +371,7 @@
               hud! |error build-errors
             println |Reloaded
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! mount-target
@@ -382,7 +382,7 @@
                 hint-fn $ Fn *dispatch-op $ -> Unit
                 dispatch! $ schema/normalize-op raw
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
