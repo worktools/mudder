@@ -576,9 +576,9 @@
                 if (nil? value) None $ Some $ decode-map-as value (Map String Dynamic)
               (:none) None
           :examples $ []
-          :schema $ quote $ Fn (Option V)
+          :schema $ quote $ Fn (Option T)
             -> $ Option $ Map String Dynamic
-            :generics V
+            :generics T
         'serialize-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn serialize-store (value)
             app.schema/assoc-wire-field
