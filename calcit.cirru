@@ -250,9 +250,10 @@
                             :inner-text "|✕"
                 .render name-plugin
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) (Map String Dynamic) (Option Dynamic)
+          :schema $ quote $ Fn respo.schema/States (Map String M) (Option F)
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
+            :generics M F
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
