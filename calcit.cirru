@@ -537,17 +537,19 @@
         'normalize-op $ %{} 'CodeEntry
           :doc "|Accept application Op values and adapt legacy widget state events."
           :code $ quote $ defn normalize-op (op)
-            if
-              = (enum-definition op) (Some Op)
-              decode-map-as op 'app.schema/Op
-              match op
+            cond
+                not $ enum? op
+                raise |Unknown-operation
+              (= (enum-definition op) (Some Op))
+                decode-map-as op 'app.schema/Op
+              true $ match op
                 (:states cursor data)
                   Op :states
                     decode-map-as cursor $ List app.schema/CursorKey
                     decode-map-as data WidgetState
                 _ $ raise |Unknown-operation
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> Op) (:open :decode)
+          :schema $ quote $ Fn Input (-> Op) (:generics Input) (:open :decode)
           :tests $ [] $ %{} 'TestEntry (:name |checked-state-cursor)
             :code $ quote $ let
                 cursor $ [] :dialog |name 0
@@ -566,6 +568,11 @@
                 do
                   normalize-op $ :: :reset
                   , false
+                fn (message)
+                  hint-fn $ Fn String $ -> Bool
+                  = message |Unknown-operation
+              assert |reject-non-enum $ try
+                do (normalize-op |invalid) false
                 fn (message)
                   hint-fn $ Fn String $ -> Bool
                   = message |Unknown-operation
