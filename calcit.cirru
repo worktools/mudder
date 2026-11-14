@@ -82,10 +82,13 @@
                     space-x 4
                     match (:clipboard store)
                       (:some clipboard)
-                        if (non-nil? clipboard)
+                        if
+                          non-nil? $ schema/to-json clipboard
                           Some $ <>
                             decode-map-as
-                              .unwrap-or (get clipboard |type) |
+                              .unwrap-or
+                                get (schema/to-json clipboard) |type
+                                , |
                               , 'String
                             {} (:font-family ui/font-fancy)
                               :color $ hsl 0 0 70
@@ -96,9 +99,7 @@
                       :on-click $ fn (e d!)
                         d! $ schema/Op :paste
                   space-x 0
-                  comp-named (>> states :named) (:memory store)
-                    .map (app.updater/focused-value store) schema/to-json
-                    , on-op
+                  comp-named (>> states :named) (:memory store) (app.updater/focused-value store) on-op
                 .render prompt-plugin
                 if dev?
                   Some $ comp-typed-reel (>> states :reel) reel ({}) on-control
@@ -255,11 +256,10 @@
                 .render name-plugin
           :examples $ []
           :schema $ quote $ Fn respo.schema/States
-            Map String $ Option Saved
-            Option Focus
+            Map String $ Option schema/JsonValue
+            Option schema/JsonValue
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
-            :generics Saved Focus
         'schema-node $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn schema-node (value)
             match value
@@ -445,8 +445,8 @@
             :copy
             :paste
             :focus $ List String
-            :paste-with $ Option Dynamic
-            :save-item String $ Option Dynamic
+            :paste-with $ Option JsonValue
+            :save-item String $ Option JsonValue
             :remove-item String
             :hydrate-storage app.schema/Store
           :examples $ []
@@ -462,8 +462,8 @@
             :api-data $ Option $ Map String JsonValue
             :version-0 $ Option $ Map String JsonValue
             :focus $ List String
-            :clipboard $ Option Dynamic
-            :memory $ Map String $ Option Dynamic
+            :clipboard $ Option JsonValue
+            :memory $ Map String $ Option JsonValue
             :extra $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
@@ -551,7 +551,7 @@
                       , :clipboard
                         match (get fields :clipboard)
                           (:some value)
-                            if (nil? value) None $ Some value
+                            if (nil? value) None $ Some $ from-json value
                           (:none) None
                         , :memory
                           filter-map-kv
@@ -559,7 +559,7 @@
                               .unwrap-or (get fields :memory) ({})
                               Map String Dynamic
                             fn (name item)
-                              MapEntryDecision :keep name $ if (nil? item) None $ Some item
+                              MapEntryDecision :keep name $ if (nil? item) None $ Some (from-json item)
                           , :extra $ dissoc
                             dissoc
                               dissoc
@@ -697,11 +697,12 @@
                       :memory $ filter-map-kv (:memory value)
                         fn (name item)
                           match item
-                            (:some data) (MapEntryDecision :keep name data)
+                            (:some data)
+                              MapEntryDecision :keep name $ to-json data
                             (:none) (MapEntryDecision :keep name nil)
                   , :api-data $ .map (:api-data value) to-json
                 , :version-0 $ .map (:version-0 value) to-json
-              , :clipboard $ :clipboard value
+              , :clipboard $ .map (:clipboard value) to-json
           :examples $ []
           :schema $ quote $ Fn Store
             -> $ Map Tag Dynamic
@@ -797,16 +798,14 @@
               (:set-bool)
                 put-focus store $ {} $ |type |boolean
               (:copy)
-                struct-with store $ :clipboard $ .map (focused-value store) app.schema/to-json
+                struct-with store $ :clipboard $ focused-value store
               (:paste)
                 match (:clipboard store)
-                  (:some item)
-                    put-focus store $ app.schema/from-json item
+                  (:some item) (put-focus store item)
                   (:none) store
               (:paste-with data)
                 match data
-                  (:some item)
-                    put-focus store $ app.schema/from-json item
+                  (:some item) (put-focus store item)
                   (:none) store
               (:save-item name tree)
                 struct-with store $ :memory $ assoc (:memory store) name tree
