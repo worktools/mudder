@@ -29,10 +29,7 @@
                   div ({})
                     match api-data
                       (:some data)
-                        comp-json-block
-                          decode-map-as (schema/to-json data) (Map String Dynamic)
-                          []
-                          , focus
+                        comp-json-block data ([]) focus
                       (:none) (<> "|Load a Swagger schema to begin.")
                   space-y 200
                 div
@@ -144,7 +141,7 @@
                           match (get data |properties)
                             (:some value) value
                             (:none) ({})
-                          Map String Dynamic
+                          Map String schema/JsonValue
                       map
                         .to-list $ keys properties
                         fn (k)
@@ -162,9 +159,7 @@
                                 <> k
                               space-x 8
                               comp-json-block
-                                .unwrap-or
-                                  schema/optional-schema $ Some v
-                                  {}
+                                schema-node $ Some v
                                 conj (conj path |properties) k
                                 , focus
               |array $ div
@@ -180,20 +175,26 @@
                   :inner-text |Array
                 space-x 8
                 comp-json-block
-                  .unwrap-or
-                    schema/optional-schema $ get data |items
-                    {}
+                  schema-node $ get data |items
                   conj path |items
                   , focus
-              |string $ comp-literal data path $ = path focus
-              |number $ comp-literal data path $ = path focus
-              |integer $ comp-literal data path $ = path focus
-              |boolean $ comp-literal data path $ = path focus
+              |string $ comp-literal
+                decode-map-as (schema/to-json data) (Map String Dynamic)
+                , path $ = path focus
+              |number $ comp-literal
+                decode-map-as (schema/to-json data) (Map String Dynamic)
+                , path $ = path focus
+              |integer $ comp-literal
+                decode-map-as (schema/to-json data) (Map String Dynamic)
+                , path $ = path focus
+              |boolean $ comp-literal
+                decode-map-as (schema/to-json data) (Map String Dynamic)
+                , path $ = path focus
               _ $ div ({})
                 do (js/console.warn "|Unkown data" data)
                   <> $ str "|Unknown data: data"
           :examples $ []
-          :schema $ quote $ Fn (Map String V) (List String) (List String) (-> respo.schema/Element) (:generics V) (:features :js-ffi)
+          :schema $ quote $ Fn (Map String schema/JsonValue) (List String) (List String) (-> respo.schema/Element) (:features :js-ffi)
         'comp-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-literal (rule path focused?)
             div
@@ -265,6 +266,18 @@
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
             :generics Saved Focus
+        'schema-node $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn schema-node (value)
+            match value
+              (:none) ({})
+              (:some node)
+                match node
+                  (app.schema/JsonNull _) ({})
+                  (Map fields) fields
+                  _ $ decode-map-as node $ Map String schema/JsonValue
+          :examples $ []
+          :schema $ quote $ Fn (Option schema/JsonValue)
+            -> $ Map String schema/JsonValue
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
