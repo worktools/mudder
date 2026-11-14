@@ -109,10 +109,15 @@
         'comp-json-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-json-block (data path focus)
             match
-              .unwrap-or (get data |type) |
+              match (get data |type)
+                (:some value)
+                  .unwrap-or (try-decode-map-as value String) |
+                (:none) |
               |object $ let
                   required-fields $ decode-map-as
-                    .unwrap-or (get data |required) ([])
+                    match (get data |required)
+                      (:some value) value
+                      (:none) ([])
                     List String
                 div
                   {} $ :style $ .merge style-block
@@ -130,7 +135,9 @@
                     {} $ :style $ {} (:margin-left |8px)
                     let
                         properties $ decode-map-as
-                          .unwrap-or (get data |properties) ({})
+                          match (get data |properties)
+                            (:some value) value
+                            (:none) ({})
                           Map String Dynamic
                       map
                         .to-list $ keys properties
@@ -180,7 +187,7 @@
                 do (js/console.warn "|Unkown data" data)
                   <> $ str "|Unknown data: data"
           :examples $ []
-          :schema $ quote $ Fn (Map String Dynamic) (List String) (List String) (-> respo.schema/Element) (:features :js-ffi)
+          :schema $ quote $ Fn (Map String V) (List String) (List String) (-> respo.schema/Element) (:generics V) (:features :js-ffi)
         'comp-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-literal (rule path focused?)
             div
