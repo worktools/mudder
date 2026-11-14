@@ -43,9 +43,8 @@
                         ; println $ :content state
                         .show prompt-plugin d! $ fn (text)
                           hint-fn $ Fn String $ -> Unit
-                          on-op $ schema/Op :api-data $ decode-map-as
+                          on-op $ schema/Op :api-data $ schema/schema-from-json
                             to-calcit-data $ js/JSON.parse text
-                            Map String Dynamic
                         , &unit
                     space-x 8
                     button $ {} (:style ui/button) (:inner-text |Reset)
@@ -69,7 +68,8 @@
                       :on-click $ fn (e d!)
                         let
                             data $ match api-data
-                              (:some data) (to-js-data data)
+                              (:some data)
+                                to-js-data $ schema/to-json data
                               (:none) (to-js-data nil)
                           copy! $ js/JSON.stringify data nil 2
                           js/console.log |Copied data
@@ -81,10 +81,13 @@
                     space-x 4
                     match (:clipboard store)
                       (:some clipboard)
-                        if (non-nil? clipboard)
+                        if
+                          non-nil? $ schema/to-json clipboard
                           Some $ <>
                             decode-map-as
-                              .unwrap-or (get clipboard |type) |
+                              .unwrap-or
+                                get (schema/to-json clipboard) |type
+                                , |
                               , 'String
                             {} (:font-family ui/font-fancy)
                               :color $ hsl 0 0 70
@@ -109,10 +112,15 @@
         'comp-json-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-json-block (data path focus)
             match
-              .unwrap-or (get data |type) |
+              match (get data |type)
+                (:some value)
+                  .unwrap-or (try-decode-map-as value String) |
+                (:none) |
               |object $ let
                   required-fields $ decode-map-as
-                    .unwrap-or (get data |required) ([])
+                    match (get data |required)
+                      (:some value) value
+                      (:none) ([])
                     List String
                 div
                   {} $ :style $ .merge style-block
@@ -130,8 +138,10 @@
                     {} $ :style $ {} (:margin-left |8px)
                     let
                         properties $ decode-map-as
-                          .unwrap-or (get data |properties) ({})
-                          Map String Dynamic
+                          match (get data |properties)
+                            (:some value) value
+                            (:none) ({})
+                          Map String schema/JsonValue
                       map
                         .to-list $ keys properties
                         fn (k)
@@ -149,9 +159,7 @@
                                 <> k
                               space-x 8
                               comp-json-block
-                                .unwrap-or
-                                  schema/optional-schema $ Some v
-                                  {}
+                                schema-node $ Some v
                                 conj (conj path |properties) k
                                 , focus
               |array $ div
@@ -167,9 +175,7 @@
                   :inner-text |Array
                 space-x 8
                 comp-json-block
-                  .unwrap-or
-                    schema/optional-schema $ get data |items
-                    {}
+                  schema-node $ get data |items
                   conj path |items
                   , focus
               |string $ comp-literal data path $ = path focus
@@ -180,7 +186,7 @@
                 do (js/console.warn "|Unkown data" data)
                   <> $ str "|Unknown data: data"
           :examples $ []
-          :schema $ quote $ Fn (Map String Dynamic) (List String) (List String) (-> respo.schema/Element) (:features :js-ffi)
+          :schema $ quote $ Fn (Map String schema/JsonValue) (List String) (List String) (-> respo.schema/Element) (:features :js-ffi)
         'comp-literal $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-literal (rule path focused?)
             div
@@ -194,22 +200,24 @@
                   :style $ {} $ :font-family ui/font-fancy
                   :on-click $ fn (e d!)
                     d! $ schema/Op :focus path
-                , :inner-text $ get rule |type
+                , :inner-text $ .map (get rule |type) schema/to-json
               match (get rule |mock)
                 (:some mock)
                   Some $ span $ schema/assoc-wire-field
                     {} $ :style $ {} (:margin-left |8px) (:font-size |10px) (:font-family ui/font-code)
                       :color $ hsl 200 40 70
-                    , :inner-text (get mock |mock)
+                    , :inner-text
+                      get (schema/to-json mock) |mock
                 (:none) None
               match (get rule |description)
                 (:some desc)
-                  Some $ <> (decode-map-as desc 'String)
+                  Some $ <>
+                    decode-map-as (schema/to-json desc) 'String
                     {} (:margin-left |8px) (:font-size |12px)
                       :color $ hsl 0 0 80
                 (:none) None
           :examples $ []
-          :schema $ quote $ Fn (Map String V) (List String) Bool (-> respo.schema/Element) (:generics V)
+          :schema $ quote $ Fn (Map String schema/JsonValue) (List String) Bool (-> respo.schema/Element)
         'comp-named $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-named (states memory focus-data on-op)
             let
@@ -247,11 +255,22 @@
                 .render name-plugin
           :examples $ []
           :schema $ quote $ Fn respo.schema/States
-            Map String $ Option Saved
-            Option Focus
+            Map String $ Option schema/JsonValue
+            Option schema/JsonValue
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
-            :generics Saved Focus
+        'schema-node $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn schema-node (value)
+            match value
+              (:none) ({})
+              (:some node)
+                match node
+                  (app.schema/JsonNull _) ({})
+                  (Map fields) fields
+                  _ $ decode-map-as node $ Map String schema/JsonValue
+          :examples $ []
+          :schema $ quote $ Fn (Option schema/JsonValue)
+            -> $ Map String schema/JsonValue
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
@@ -403,10 +422,21 @@
           :code $ quote $ defunion CursorKey Tag String Number
           :examples $ []
           :schema $ quote UnionDef
+        'JsonNull $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defenum JsonNull (:null)
+          :examples $ []
+          :schema $ quote EnumDef
+        'JsonValue $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion JsonValue Bool Number String JsonNull LegacyValue (List JsonValue) (Map String JsonValue)
+          :examples $ []
+        'LegacyValue $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defenum LegacyValue (:raw Dynamic)
+          :examples $ []
+          :schema $ quote EnumDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :states (List app.schema/CursorKey) WidgetState
-            :api-data $ Map String Dynamic
+            :api-data $ Map String JsonValue
             :reset
             :wrap-object
             :wrap-array
@@ -414,8 +444,8 @@
             :copy
             :paste
             :focus $ List String
-            :paste-with $ Option Dynamic
-            :save-item String $ Option Dynamic
+            :paste-with $ Option JsonValue
+            :save-item String $ Option JsonValue
             :remove-item String
             :hydrate-storage app.schema/Store
           :examples $ []
@@ -428,11 +458,11 @@
           :doc "|Root application state. Swagger values and heterogeneous Respo state remain honest open boundaries; extra preserves unknown legacy root fields."
           :code $ quote $ defstruct Store
             :states $ Map app.schema/CursorKey Dynamic
-            :api-data $ Option $ Map String Dynamic
-            :version-0 $ Option $ Map String Dynamic
+            :api-data $ Option $ Map String JsonValue
+            :version-0 $ Option $ Map String JsonValue
             :focus $ List String
-            :clipboard $ Option Dynamic
-            :memory $ Map String $ Option Dynamic
+            :clipboard $ Option JsonValue
+            :memory $ Map String $ Option JsonValue
             :extra $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
@@ -506,9 +536,13 @@
                   .unwrap-or (get fields :states) ({})
                   Map app.schema/CursorKey Dynamic
                 , :api-data
-                  optional-schema $ get fields :api-data
+                  .map
+                    optional-schema $ get fields :api-data
+                    , schema-from-json
                   , :version-0
-                    optional-schema $ get fields :version-0
+                    .map
+                      optional-schema $ get fields :version-0
+                      , schema-from-json
                     , :focus
                       decode-map-as
                         .unwrap-or (get fields :focus) ([])
@@ -516,7 +550,7 @@
                       , :clipboard
                         match (get fields :clipboard)
                           (:some value)
-                            if (nil? value) None $ Some value
+                            if (nil? value) None $ Some $ from-json value
                           (:none) None
                         , :memory
                           filter-map-kv
@@ -524,7 +558,7 @@
                               .unwrap-or (get fields :memory) ({})
                               Map String Dynamic
                             fn (name item)
-                              MapEntryDecision :keep name $ if (nil? item) None $ Some item
+                              MapEntryDecision :keep name $ if (nil? item) None $ Some (from-json item)
                           , :extra $ dissoc
                             dissoc
                               dissoc
@@ -536,6 +570,33 @@
                             , :memory
           :examples $ []
           :schema $ quote $ Fn V (-> Store) (:generics V)
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-non-json-extensions)
+            :code $ quote $ let
+                source $ {} (|type |object)
+                  |extensions $ [] :legacy 'symbol (#{} 1)
+                    {} $ :tag-key false
+                    :: :legacy nil
+                raw $ assoc (serialize-store store) :api-data source
+              assert= raw $ serialize-store $ decode-store raw
+        'from-json $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn from-json (raw)
+            cond
+                nil? raw
+                JsonNull :null
+              (list? raw) (map raw from-json)
+              (map? raw)
+                match
+                  try-decode-map-as raw $ Map String Dynamic
+                  (:ok fields)
+                    filter-map-kv fields $ fn (key value)
+                      MapEntryDecision :keep key $ from-json value
+                  (:err _) (LegacyValue :raw raw)
+              (bool? raw) raw
+              (number? raw) raw
+              (string? raw) raw
+              true $ LegacyValue :raw raw
+          :examples $ []
+          :schema $ quote $ Fn Input (-> JsonValue) (:generics Input)
         'normalize-op $ %{} 'CodeEntry
           :doc "|Accept application Op values and adapt legacy widget state events."
           :code $ quote $ defn normalize-op (op)
@@ -589,6 +650,40 @@
           :schema $ quote $ Fn (Option T)
             -> $ Option $ Map String Dynamic
             :generics T
+        'read-tree $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn read-tree (value path)
+            match (destruct-list path)
+              (:none) (Some value)
+              (:some key tail)
+                match value
+                  (Map fields)
+                    match (get fields key)
+                      (:some child) (read-tree child tail)
+                      (:none) None
+                  (JsonNull _) None
+                  _ $ match
+                    get-in (to-json value) path
+                    (:ok child)
+                      Some $ from-json child
+                    (:err error)
+                      match error
+                        (:missing) None
+                        (:shape message) (raise message)
+          :examples $ []
+          :schema $ quote $ Fn JsonValue (List String)
+            -> $ Option JsonValue
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-missing-string-child)
+            :code $ quote $ assert= None
+              read-tree
+                schema-from-json $ {} $ |label |hello
+                [] |label |child
+        'schema-from-json $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn schema-from-json (raw)
+            decode-map-as (from-json raw) (Map String JsonValue)
+          :examples $ []
+          :schema $ quote $ Fn Input
+            -> $ Map String JsonValue
+            :generics Input
         'serialize-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn serialize-store (value)
             app.schema/assoc-wire-field
@@ -601,11 +696,12 @@
                       :memory $ filter-map-kv (:memory value)
                         fn (name item)
                           match item
-                            (:some data) (MapEntryDecision :keep name data)
+                            (:some data)
+                              MapEntryDecision :keep name $ to-json data
                             (:none) (MapEntryDecision :keep name nil)
-                  , :api-data $ :api-data value
-                , :version-0 $ :version-0 value
-              , :clipboard $ :clipboard value
+                  , :api-data $ .map (:api-data value) to-json
+                , :version-0 $ .map (:version-0 value) to-json
+              , :clipboard $ .map (:clipboard value) to-json
           :examples $ []
           :schema $ quote $ Fn Store
             -> $ Map Tag Dynamic
@@ -616,6 +712,36 @@
               , :api-data None :version-0 None :focus ([]) :clipboard None :memory ({}) :extra $ {}
           :examples $ []
           :schema $ quote Store
+        'to-json $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn to-json (value)
+            match value
+              (JsonNull _) nil
+              (LegacyValue legacy)
+                match legacy $
+                  :raw raw
+                  , raw
+              (List items) (map items to-json)
+              (Map fields)
+                filter-map-kv fields $ fn (key item)
+                  MapEntryDecision :keep key $ to-json item
+              (Bool item) item
+              (Number item) item
+              (String item) item
+          :examples $ []
+          :schema $ quote $ Fn JsonValue (-> Dynamic) (:open :reflect)
+        'write-tree $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn write-tree (tree path value)
+            match (destruct-list path)
+              (:none) value
+              (:some key tail)
+                match tree
+                  (Map fields)
+                    let
+                        child $ .unwrap-or (get fields key) (JsonNull :null)
+                      assoc fields key $ write-tree child tail value
+                  _ $ from-json $ assoc-in (to-json tree) path (to-json value)
+          :examples $ []
+          :schema $ quote $ Fn JsonValue (List String) JsonValue (-> JsonValue)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -625,27 +751,26 @@
             match (:api-data store)
               (:some api)
                 match
-                  get-in api $ :focus store
-                  (:ok value)
-                    if (nil? value) None $ Some value
-                  (:err error)
-                    match error
-                      (:missing) None
-                      (:shape message) (raise message)
+                  app.schema/read-tree api $ :focus store
+                  (:some value)
+                    match value
+                      (app.schema/JsonNull _) None
+                      _ $ Some value
+                  (:none) None
               (:none) None
           :examples $ []
           :schema $ quote $ Fn app.schema/Store
-            -> $ Option Dynamic
+            -> $ Option app.schema/JsonValue
         'put-focus $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn put-focus (store value)
             let
                 api $ .unwrap-or (:api-data store) ({})
                 updated $ decode-map-as
-                  assoc-in api (:focus store) value
-                  Map String Dynamic
+                  app.schema/write-tree api (:focus store) value
+                  Map String app.schema/JsonValue
               struct-with store $ :api-data $ Some updated
           :examples $ []
-          :schema $ quote $ Fn app.schema/Store V (-> app.schema/Store) (:generics V)
+          :schema $ quote $ Fn app.schema/Store app.schema/JsonValue (-> app.schema/Store)
         'updater $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater (store op op-id op-time)
             match op
@@ -663,11 +788,10 @@
                 struct-with store $ :focus path
               (:wrap-object)
                 put-focus store $ {} (|type |object)
-                  |properties $ app.schema/assoc-wire-field ({}) |data $ focused-value store
+                  |properties $ .assoc ({}) |data $ .unwrap-or (focused-value store) (app.schema/JsonNull :null)
               (:wrap-array)
-                put-focus store $ app.schema/assoc-wire-field
-                  {} $ |type |array
-                  , |items $ focused-value store
+                put-focus store $ {} (|type |array)
+                  |items $ .unwrap-or (focused-value store) (app.schema/JsonNull :null)
               (:set-bool)
                 put-focus store $ {} $ |type |boolean
               (:copy)
@@ -695,7 +819,9 @@
                     |properties $ {} $ |flag
                       {} (|type |string)
                         |x-extension $ [] false nil
-                  loaded $ updater initial (app.schema/Op :api-data source) |load 1
+                  loaded $ updater initial
+                    app.schema/Op :api-data $ app.schema/schema-from-json source
+                    , |load 1
                   focused $ updater loaded
                     app.schema/Op :focus $ [] |properties |flag
                     , |focus 2
@@ -708,15 +834,16 @@
                   removed $ updater saved (app.schema/Op :remove-item |nullable) |remove 9
                 assert= (Result :ok |array)
                   get-in
-                    .unwrap $ :api-data wrapped
+                    app.schema/to-json $ .unwrap $ :api-data wrapped
                     [] |properties |flag |type
                 assert=
                   Result :ok $ [] false nil
                   get-in
-                    .unwrap $ :api-data wrapped
+                    app.schema/to-json $ .unwrap $ :api-data wrapped
                     [] |properties |flag |items |x-extension
                 assert= (:api-data wrapped) (:api-data pasted)
-                assert= (Some source) (:api-data reset)
+                assert= (Some source)
+                  .map (:api-data reset) app.schema/to-json
                 assert= (Some None)
                   get (:memory saved) |nullable
                 assert= None $ get (:memory removed) |nullable
@@ -727,7 +854,7 @@
                       , |paste-false 11
                   assert= (Result :ok false)
                     get-in
-                      .unwrap $ :api-data pasted-false
+                      app.schema/to-json $ .unwrap $ :api-data pasted-false
                       [] |properties |flag
                 assert= initial $ updater initial (app.schema/Op :paste) |empty 10
               :tags $ #{} :unit
@@ -746,7 +873,7 @@
             %{} 'TestEntry (:name |copy-null-retains-empty-clipboard)
               :code $ quote $ let
                   loaded $ updater app.schema/store
-                    app.schema/Op :api-data $ {} (|type |object) (|nullable nil)
+                    app.schema/Op :api-data $ app.schema/schema-from-json $ {} (|type |object) (|nullable nil)
                     , |load 1
                   focused $ updater loaded
                     app.schema/Op :focus $ [] |nullable
@@ -755,6 +882,24 @@
                 assert= None $ :clipboard copied
                 assert= copied $ updater copied (app.schema/Op :paste) |paste 4
               :tags $ #{} :unit
+            %{} 'TestEntry (:name |edits-under-null-and-preserves-archive)
+              :code $ quote $ let
+                  raw $ {} (|nullable nil) (|flag false)
+                  loaded $ updater app.schema/store
+                    app.schema/Op :api-data $ app.schema/schema-from-json raw
+                    , |load 1
+                  focused $ updater loaded
+                    app.schema/Op :focus $ [] |nullable |child
+                    , |focus 2
+                  edited $ updater focused
+                    app.schema/Op :paste-with $ Some true
+                    , |paste 3
+                  archived $ app.schema/serialize-store edited
+                assert=
+                  Some $ assoc-in raw ([] |nullable |child) true
+                  get archived :api-data
+                assert= (Some raw) (get archived :version-0)
+                assert= edited $ app.schema/decode-store archived
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
           :require $ respo.cursor :refer $ update-state-tree
