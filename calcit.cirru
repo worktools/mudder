@@ -224,11 +224,7 @@
                         -> Unit
                       .show name-plugin d! $ fn (text)
                         hint-fn $ Fn String $ -> Unit
-                        match focus-data
-                          (:some item)
-                            on-op $ schema/Op :save-item text item
-                          (:none)
-                            on-op $ schema/Op :save-item text nil
+                        on-op $ schema/Op :save-item text focus-data
                       , &unit
                 keyed-> ({})
                   map
@@ -250,10 +246,11 @@
                             :inner-text "|✕"
                 .render name-plugin
           :examples $ []
-          :schema $ quote $ Fn respo.schema/States (Map String M) (Option F)
+          :schema $ quote $ Fn respo.schema/States
+            Map String $ Option Dynamic
+            Option Dynamic
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
-            :generics M F
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
@@ -416,8 +413,8 @@
             :copy
             :paste
             :focus $ List String
-            :paste-with Dynamic
-            :save-item String Dynamic
+            :paste-with $ Option Dynamic
+            :save-item String $ Option Dynamic
             :remove-item String
             :hydrate-storage app.schema/Store
           :examples $ []
@@ -434,7 +431,7 @@
             :version-0 $ Option $ Map String Dynamic
             :focus $ List String
             :clipboard $ Option Dynamic
-            :memory $ Map String Dynamic
+            :memory $ Map String $ Option Dynamic
             :extra $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
@@ -447,7 +444,8 @@
                   checked $ decode-store raw
                 assert= raw $ serialize-store checked
                 assert= None $ :api-data checked
-                assert= (Some false)
+                assert=
+                  Some $ Some false
                   get (:memory checked) |boolean
               :tags $ #{} :unit
             %{} 'TestEntry (:name |rejects-malformed-focus)
@@ -520,9 +518,12 @@
                             if (nil? value) None $ Some value
                           (:none) None
                         , :memory
-                          decode-map-as
-                            .unwrap-or (get fields :memory) ({})
-                            Map String Dynamic
+                          filter-map-kv
+                            decode-map-as
+                              .unwrap-or (get fields :memory) ({})
+                              Map String Dynamic
+                            fn (name item)
+                              MapEntryDecision :keep name $ if (nil? item) None $ Some item
                           , :extra $ dissoc
                             dissoc
                               dissoc
@@ -596,7 +597,11 @@
                     {}
                       :states $ :states value
                       :focus $ :focus value
-                      :memory $ :memory value
+                      :memory $ filter-map-kv (:memory value)
+                        fn (name item)
+                          match item
+                            (:some data) (MapEntryDecision :keep name data)
+                            (:none) (MapEntryDecision :keep name nil)
                   , :api-data $ :api-data value
                 , :version-0 $ :version-0 value
               , :clipboard $ :clipboard value
@@ -671,7 +676,9 @@
                   (:some item) (put-focus store item)
                   (:none) store
               (:paste-with data)
-                if (nil? data) store $ put-focus store data
+                match data
+                  (:some item) (put-focus store item)
+                  (:none) store
               (:save-item name tree)
                 struct-with store $ :memory $ assoc (:memory store) name tree
               (:remove-item name)
@@ -696,7 +703,7 @@
                   changed $ updater copied (app.schema/Op :set-bool) |bool 5
                   pasted $ updater changed (app.schema/Op :paste) |paste 6
                   reset $ updater pasted (app.schema/Op :reset) |reset 7
-                  saved $ updater reset (app.schema/Op :save-item |nullable nil) |save 8
+                  saved $ updater reset (app.schema/Op :save-item |nullable None) |save 8
                   removed $ updater saved (app.schema/Op :remove-item |nullable) |remove 9
                 assert= (Result :ok |array)
                   get-in
@@ -709,9 +716,18 @@
                     [] |properties |flag |items |x-extension
                 assert= (:api-data wrapped) (:api-data pasted)
                 assert= (Some source) (:api-data reset)
-                assert= (Some nil)
+                assert= (Some None)
                   get (:memory saved) |nullable
                 assert= None $ get (:memory removed) |nullable
+                assert= saved $ updater saved (app.schema/Op :paste-with None) |paste-empty 10
+                let
+                    pasted-false $ updater saved
+                      app.schema/Op :paste-with $ Some false
+                      , |paste-false 11
+                  assert= (Result :ok false)
+                    get-in
+                      .unwrap $ :api-data pasted-false
+                      [] |properties |flag
                 assert= initial $ updater initial (app.schema/Op :paste) |empty 10
               :tags $ #{} :unit
             %{} 'TestEntry (:name |state-update-does-not-nest-store)
