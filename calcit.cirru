@@ -178,18 +178,10 @@
                   schema-node $ get data |items
                   conj path |items
                   , focus
-              |string $ comp-literal
-                decode-map-as (schema/to-json data) (Map String Dynamic)
-                , path $ = path focus
-              |number $ comp-literal
-                decode-map-as (schema/to-json data) (Map String Dynamic)
-                , path $ = path focus
-              |integer $ comp-literal
-                decode-map-as (schema/to-json data) (Map String Dynamic)
-                , path $ = path focus
-              |boolean $ comp-literal
-                decode-map-as (schema/to-json data) (Map String Dynamic)
-                , path $ = path focus
+              |string $ comp-literal data path $ = path focus
+              |number $ comp-literal data path $ = path focus
+              |integer $ comp-literal data path $ = path focus
+              |boolean $ comp-literal data path $ = path focus
               _ $ div ({})
                 do (js/console.warn "|Unkown data" data)
                   <> $ str "|Unknown data: data"
@@ -208,22 +200,24 @@
                   :style $ {} $ :font-family ui/font-fancy
                   :on-click $ fn (e d!)
                     d! $ schema/Op :focus path
-                , :inner-text $ get rule |type
+                , :inner-text $ .map (get rule |type) schema/to-json
               match (get rule |mock)
                 (:some mock)
                   Some $ span $ schema/assoc-wire-field
                     {} $ :style $ {} (:margin-left |8px) (:font-size |10px) (:font-family ui/font-code)
                       :color $ hsl 200 40 70
-                    , :inner-text (get mock |mock)
+                    , :inner-text
+                      get (schema/to-json mock) |mock
                 (:none) None
               match (get rule |description)
                 (:some desc)
-                  Some $ <> (decode-map-as desc 'String)
+                  Some $ <>
+                    decode-map-as (schema/to-json desc) 'String
                     {} (:margin-left |8px) (:font-size |12px)
                       :color $ hsl 0 0 80
                 (:none) None
           :examples $ []
-          :schema $ quote $ Fn (Map String V) (List String) Bool (-> respo.schema/Element) (:generics V)
+          :schema $ quote $ Fn (Map String schema/JsonValue) (List String) Bool (-> respo.schema/Element)
         'comp-named $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-named (states memory focus-data on-op)
             let
