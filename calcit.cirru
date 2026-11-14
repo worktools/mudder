@@ -99,7 +99,9 @@
                       :on-click $ fn (e d!)
                         d! $ schema/Op :paste
                   space-x 0
-                  comp-named (>> states :named) (:memory store) (app.updater/focused-value store) on-op
+                  comp-named (>> states :named) (:memory store)
+                    .map (app.updater/focused-value store) schema/to-json
+                    , on-op
                 .render prompt-plugin
                 if dev?
                   Some $ comp-typed-reel (>> states :reel) reel ({}) on-control
@@ -742,22 +744,24 @@
                 match
                   app.schema/read-tree api $ :focus store
                   (:some value)
-                    nil->option $ app.schema/to-json value
+                    match value
+                      (app.schema/JsonNull _) None
+                      _ $ Some value
                   (:none) None
               (:none) None
           :examples $ []
           :schema $ quote $ Fn app.schema/Store
-            -> $ Option Dynamic
+            -> $ Option app.schema/JsonValue
         'put-focus $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn put-focus (store value)
             let
                 api $ .unwrap-or (:api-data store) ({})
                 updated $ decode-map-as
-                  app.schema/write-tree api (:focus store) (app.schema/from-json value)
+                  app.schema/write-tree api (:focus store) value
                   Map String app.schema/JsonValue
               struct-with store $ :api-data $ Some updated
           :examples $ []
-          :schema $ quote $ Fn app.schema/Store V (-> app.schema/Store) (:generics V)
+          :schema $ quote $ Fn app.schema/Store app.schema/JsonValue (-> app.schema/Store)
         'updater $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater (store op op-id op-time)
             match op
@@ -767,7 +771,7 @@
                   Map app.schema/CursorKey Dynamic
               (:api-data data)
                 let
-                    typed $ decode-map-as (app.schema/from-json data) (Map String app.schema/JsonValue)
+                    typed $ app.schema/schema-from-json data
                   struct-with store
                     :api-data $ Some typed
                     :version-0 $ Some typed
@@ -777,22 +781,23 @@
                 struct-with store $ :focus path
               (:wrap-object)
                 put-focus store $ {} (|type |object)
-                  |properties $ app.schema/assoc-wire-field ({}) |data $ focused-value store
+                  |properties $ .assoc ({}) |data $ .unwrap-or (focused-value store) (app.schema/JsonNull :null)
               (:wrap-array)
-                put-focus store $ app.schema/assoc-wire-field
-                  {} $ |type |array
-                  , |items $ focused-value store
+                put-focus store $ {} (|type |array)
+                  |items $ .unwrap-or (focused-value store) (app.schema/JsonNull :null)
               (:set-bool)
                 put-focus store $ {} $ |type |boolean
               (:copy)
-                struct-with store $ :clipboard $ focused-value store
+                struct-with store $ :clipboard $ .map (focused-value store) app.schema/to-json
               (:paste)
                 match (:clipboard store)
-                  (:some item) (put-focus store item)
+                  (:some item)
+                    put-focus store $ app.schema/from-json item
                   (:none) store
               (:paste-with data)
                 match data
-                  (:some item) (put-focus store item)
+                  (:some item)
+                    put-focus store $ app.schema/from-json item
                   (:none) store
               (:save-item name tree)
                 struct-with store $ :memory $ assoc (:memory store) name tree
