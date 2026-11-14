@@ -247,10 +247,11 @@
                 .render name-plugin
           :examples $ []
           :schema $ quote $ Fn respo.schema/States
-            Map String $ Option Dynamic
-            Option Dynamic
+            Map String $ Option Saved
+            Option Focus
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
+            :generics Saved Focus
         'style-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-block
             {}
