@@ -662,20 +662,22 @@
                       (:some child) (read-tree child tail)
                       (:none) None
                   (JsonNull _) None
-                  (LegacyValue legacy)
-                    match legacy $
-                      :raw raw
-                      match (get-in raw path)
-                        (:ok child)
-                          Some $ from-json child
-                        (:err error)
-                          match error
-                            (:missing) None
-                            (:shape message) (raise message)
-                  _ $ raise |Expected-map-at-schema-path
+                  _ $ match
+                    get-in (to-json value) path
+                    (:ok child)
+                      Some $ from-json child
+                    (:err error)
+                      match error
+                        (:missing) None
+                        (:shape message) (raise message)
           :examples $ []
           :schema $ quote $ Fn JsonValue (List String)
             -> $ Option JsonValue
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-missing-string-child)
+            :code $ quote $ assert= None
+              read-tree
+                schema-from-json $ {} $ |label |hello
+                [] |label |child
         'schema-from-json $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn schema-from-json (raw)
             decode-map-as (from-json raw) (Map String JsonValue)
