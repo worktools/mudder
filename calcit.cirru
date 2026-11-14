@@ -419,8 +419,12 @@
           :examples $ []
           :schema $ quote EnumDef
         'JsonValue $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defunion JsonValue Bool Number String JsonNull (List JsonValue) (Map String JsonValue)
+          :code $ quote $ defunion JsonValue Bool Number String JsonNull LegacyValue (List JsonValue) (Map String JsonValue)
           :examples $ []
+        'LegacyValue $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defenum LegacyValue (:raw Dynamic)
+          :examples $ []
+          :schema $ quote EnumDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :states (List app.schema/CursorKey) WidgetState
@@ -558,6 +562,14 @@
                             , :memory
           :examples $ []
           :schema $ quote $ Fn V (-> Store) (:generics V)
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-non-json-extensions)
+            :code $ quote $ let
+                source $ {} (|type |object)
+                  |extensions $ [] :legacy 'symbol (#{} 1)
+                    {} $ :tag-key false
+                    :: :legacy nil
+                raw $ assoc (serialize-store store) :api-data source
+              assert= raw $ serialize-store $ decode-store raw
         'from-json $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn from-json (raw)
             cond
@@ -565,11 +577,16 @@
                 JsonNull :null
               (list? raw) (map raw from-json)
               (map? raw)
-                filter-map-kv
-                  decode-map-as raw $ Map String Dynamic
-                  fn (key value)
-                    MapEntryDecision :keep key $ from-json value
-              true $ decode-map-as raw JsonValue
+                match
+                  try-decode-map-as raw $ Map String Dynamic
+                  (:ok fields)
+                    filter-map-kv fields $ fn (key value)
+                      MapEntryDecision :keep key $ from-json value
+                  (:err _) (LegacyValue :raw raw)
+              (bool? raw) raw
+              (number? raw) raw
+              (string? raw) raw
+              true $ LegacyValue :raw raw
           :examples $ []
           :schema $ quote $ Fn Input (-> JsonValue) (:generics Input)
         'normalize-op $ %{} 'CodeEntry
@@ -636,6 +653,16 @@
                       (:some child) (read-tree child tail)
                       (:none) None
                   (JsonNull _) None
+                  (LegacyValue legacy)
+                    match legacy $
+                      :raw raw
+                      match (get-in raw path)
+                        (:ok child)
+                          Some $ from-json child
+                        (:err error)
+                          match error
+                            (:missing) None
+                            (:shape message) (raise message)
                   _ $ raise |Expected-map-at-schema-path
           :examples $ []
           :schema $ quote $ Fn JsonValue (List String)
@@ -678,6 +705,10 @@
           :code $ quote $ defn to-json (value)
             match value
               (JsonNull _) nil
+              (LegacyValue legacy)
+                match legacy $
+                  :raw raw
+                  , raw
               (List items) (map items to-json)
               (Map fields)
                 filter-map-kv fields $ fn (key item)
@@ -692,13 +723,12 @@
             match (destruct-list path)
               (:none) value
               (:some key tail)
-                let
-                    fields $ match tree
-                      (Map data) data
-                      (JsonNull _) ({})
-                      _ $ raise |Expected-map-at-schema-path
-                    child $ .unwrap-or (get fields key) (JsonNull :null)
-                  assoc fields key $ write-tree child tail value
+                match tree
+                  (Map fields)
+                    let
+                        child $ .unwrap-or (get fields key) (JsonNull :null)
+                      assoc fields key $ write-tree child tail value
+                  _ $ from-json $ assoc-in (to-json tree) path (to-json value)
           :examples $ []
           :schema $ quote $ Fn JsonValue (List String) JsonValue (-> JsonValue)
       :ns $ %{} 'NsEntry (:doc |)
