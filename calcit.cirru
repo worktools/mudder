@@ -43,9 +43,8 @@
                         ; println $ :content state
                         .show prompt-plugin d! $ fn (text)
                           hint-fn $ Fn String $ -> Unit
-                          on-op $ schema/Op :api-data $ decode-map-as
+                          on-op $ schema/Op :api-data $ schema/schema-from-json
                             to-calcit-data $ js/JSON.parse text
-                            Map String Dynamic
                         , &unit
                     space-x 8
                     button $ {} (:style ui/button) (:inner-text |Reset)
@@ -437,7 +436,7 @@
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :states (List app.schema/CursorKey) WidgetState
-            :api-data $ Map String Dynamic
+            :api-data $ Map String JsonValue
             :reset
             :wrap-object
             :wrap-array
@@ -780,11 +779,9 @@
                   update-state-tree (:states store) cursor data
                   Map app.schema/CursorKey Dynamic
               (:api-data data)
-                let
-                    typed $ app.schema/schema-from-json data
-                  struct-with store
-                    :api-data $ Some typed
-                    :version-0 $ Some typed
+                struct-with store
+                  :api-data $ Some data
+                  :version-0 $ Some data
               (:reset)
                 struct-with store $ :api-data $ :version-0 store
               (:focus path)
@@ -822,7 +819,9 @@
                     |properties $ {} $ |flag
                       {} (|type |string)
                         |x-extension $ [] false nil
-                  loaded $ updater initial (app.schema/Op :api-data source) |load 1
+                  loaded $ updater initial
+                    app.schema/Op :api-data $ app.schema/schema-from-json source
+                    , |load 1
                   focused $ updater loaded
                     app.schema/Op :focus $ [] |properties |flag
                     , |focus 2
@@ -874,7 +873,7 @@
             %{} 'TestEntry (:name |copy-null-retains-empty-clipboard)
               :code $ quote $ let
                   loaded $ updater app.schema/store
-                    app.schema/Op :api-data $ {} (|type |object) (|nullable nil)
+                    app.schema/Op :api-data $ app.schema/schema-from-json $ {} (|type |object) (|nullable nil)
                     , |load 1
                   focused $ updater loaded
                     app.schema/Op :focus $ [] |nullable
@@ -886,7 +885,9 @@
             %{} 'TestEntry (:name |edits-under-null-and-preserves-archive)
               :code $ quote $ let
                   raw $ {} (|nullable nil) (|flag false)
-                  loaded $ updater app.schema/store (app.schema/Op :api-data raw) |load 1
+                  loaded $ updater app.schema/store
+                    app.schema/Op :api-data $ app.schema/schema-from-json raw
+                    , |load 1
                   focused $ updater loaded
                     app.schema/Op :focus $ [] |nullable |child
                     , |focus 2
