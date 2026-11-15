@@ -536,13 +536,9 @@
                   .unwrap-or (get fields :states) ({})
                   Map app.schema/CursorKey Dynamic
                 , :api-data
-                  .map
-                    optional-schema $ get fields :api-data
-                    , schema-from-json
+                  optional-schema $ get fields :api-data
                   , :version-0
-                    .map
-                      optional-schema $ get fields :version-0
-                      , schema-from-json
+                    optional-schema $ get fields :version-0
                     , :focus
                       decode-map-as
                         .unwrap-or (get fields :focus) ([])
@@ -640,15 +636,16 @@
                   hint-fn $ Fn String $ -> Bool
                   = message |Unknown-operation
             :tags $ #{} :unit
-        'optional-schema $ %{} 'CodeEntry (:doc |)
+        'optional-schema $ %{} 'CodeEntry
+          :doc "|Decode an optional saved API-data map into the recursive JsonValue union instead of leaving its values Dynamic."
           :code $ quote $ defn optional-schema (raw)
             match raw
               (:some value)
-                if (nil? value) None $ Some $ decode-map-as value (Map String Dynamic)
+                if (nil? value) None $ Some $ schema-from-json value
               (:none) None
           :examples $ []
           :schema $ quote $ Fn (Option T)
-            -> $ Option $ Map String Dynamic
+            -> $ Option $ Map String JsonValue
             :generics T
         'read-tree $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-tree (value path)
