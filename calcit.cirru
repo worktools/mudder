@@ -105,10 +105,10 @@
                   , None
           :examples $ []
           :schema $ quote $ Fn (reel.typed/State schema/Op schema/Store)
-            Fn reel.typed/Control $ -> Unit
+            Fn reel.typed/Control (-> Unit) (:features :io :state)
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
-            :features :js-ffi
+            :features :io :js-ffi :state
         'comp-json-block $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-json-block (data path focus)
             match
@@ -259,6 +259,7 @@
             Option schema/JsonValue
             Fn schema/Op $ -> Unit
             -> respo.schema/Component
+            :features :io :state
         'schema-node $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn schema-node (value)
             match value
