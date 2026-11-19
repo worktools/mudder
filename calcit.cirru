@@ -430,6 +430,7 @@
         'JsonValue $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defunion JsonValue Bool Number String JsonNull LegacyValue (List JsonValue) (Map String JsonValue)
           :examples $ []
+          :schema $ quote UnionDef
         'LegacyValue $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum LegacyValue (:raw Dynamic)
           :examples $ []
