@@ -10,7 +10,7 @@
 
 递归 JSON union 补齐 `UnionDef` 声明，成员与数据格式不变。Swagger 根节点和递归节点在进入渲染器前检查为 String 键 Map。空节点沿用空 Map 的展示。开发面板的控制与应用操作在事件校验后使用不同的类型分支，旧 Alerts 弹窗仍可发送匿名状态事件。
 
-Respo 0.19.12、UI 0.15.6、Reel 0.11.4、Alerts 0.14.7 和 JS FFI 0.2.18 均使用正式版本。
+Respo 0.19.13、UI 0.15.7、Reel 0.11.5、Alerts 0.14.8 和 JS FFI 0.2.19 均使用正式版本。
 
 ## 开发
 
