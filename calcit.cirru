@@ -774,9 +774,7 @@
           :code $ quote $ defn updater (store op op-id op-time)
             match op
               (:states cursor data)
-                struct-with store $ :states $ decode-map-as
-                  update-state-tree (:states store) cursor data
-                  Map app.schema/CursorKey Dynamic
+                struct-with store $ :states $ update-state-map (:states store) cursor data
               (:api-data data)
                 struct-with store
                   :api-data $ Some data
@@ -901,4 +899,4 @@
                 assert= edited $ app.schema/decode-store archived
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
-          :require $ respo.cursor :refer $ update-state-tree
+          :require $ respo.cursor :refer $ update-state-map
